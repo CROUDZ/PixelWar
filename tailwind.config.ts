@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
-    './src/app/**/*.{ts,tsx,js,jsx}', // Pages et layouts Next.js
+    './src/pages/**/*.{ts,tsx,js,jsx}', // Pages et layouts Next.js
     './src/components/**/*.{ts,tsx,js,jsx}', // Composants React
   ],
   theme: {
