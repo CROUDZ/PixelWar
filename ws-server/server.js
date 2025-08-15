@@ -22,7 +22,8 @@ const DEFAULT_COLOR = "#FFFFFF";
     if (raw) {
       try {
         grid = JSON.parse(raw);
-        if (!Array.isArray(grid) || grid.length !== WIDTH * HEIGHT) throw new Error("Bad grid");
+        if (!Array.isArray(grid) || grid.length !== WIDTH * HEIGHT)
+          throw new Error("Bad grid");
       } catch {
         grid = new Array(WIDTH * HEIGHT).fill(DEFAULT_COLOR);
         await client.set(GRID_KEY, JSON.stringify(grid));
@@ -54,11 +55,13 @@ const DEFAULT_COLOR = "#FFFFFF";
 
   wss.on("connection", async (ws) => {
     // Optionnel : assigner un id temporaire à la socket
-    ws._id = `${Date.now()}-${Math.floor(Math.random()*10000)}`;
+    ws._id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     console.log("Client connected:", ws._id);
 
     // Envoyer l'état complet (init)
-    ws.send(JSON.stringify({ type: "init", width: WIDTH, height: HEIGHT, grid }));
+    ws.send(
+      JSON.stringify({ type: "init", width: WIDTH, height: HEIGHT, grid }),
+    );
 
     ws.on("message", async (msg) => {
       let data;
@@ -91,13 +94,22 @@ const DEFAULT_COLOR = "#FFFFFF";
         // Persist to Redis (on peut batcher, ici on sauvegarde immédiatement)
         try {
           await client.set(GRID_KEY, JSON.stringify(grid));
-          console.log(`Pixel placed at (${x}, ${y}) with color ${color} by ${key}`);
+          console.log(
+            `Pixel placed at (${x}, ${y}) with color ${color} by ${key}`,
+          );
         } catch (err) {
           console.error("Redis set failed:", err);
         }
 
         // Broadcast à tous
-        broadcast({ type: "updatePixel", x, y, color, userId: key, timestamp: now });
+        broadcast({
+          type: "updatePixel",
+          x,
+          y,
+          color,
+          userId: key,
+          timestamp: now,
+        });
       }
     });
 
@@ -119,5 +131,4 @@ const DEFAULT_COLOR = "#FFFFFF";
       console.error("Auto-save failed:", e);
     }
   }, 10_000); // toutes les 10s
-
 })();

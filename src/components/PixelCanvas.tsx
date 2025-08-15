@@ -1,6 +1,7 @@
 // PixelCanvas.tsx (React + Next.js app dir -> "use client")
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import PixelSelector from "./PixelSelector";
 
 const WS_URL = "ws://localhost:8080"; // adapte si nécessaire
 
@@ -9,18 +10,27 @@ interface PixelCanvasProps {
   pixelHeight?: number;
 }
 
-export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: PixelCanvasProps) {
+export default function PixelCanvas({
+  pixelWidth = 100,
+  pixelHeight = 100,
+}: PixelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const [connected, setConnected] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   // Taille d'affichage (CSS) du canvas
-  const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 });
+  const [canvasDisplaySize, setCanvasDisplaySize] = useState({
+    width: 0,
+    height: 0,
+  });
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(null);
+  const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [gridData, setGridData] = useState<Record<string, string>>({});
   const prevHoverRef = useRef<{ x: number; y: number } | null>(null);
+  const [selectedColor, setSelectedColor] = useState("#FF0000");
 
   useEffect(() => {
     // Empêche le scroll sur la page
@@ -30,8 +40,8 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
       const header = document.getElementById("header");
       const hHeight = header ? header.offsetHeight : 0;
       setHeaderHeight(hHeight);
-      const availableWidth = window.innerWidth -10;
-      const availableHeight = window.innerHeight - hHeight -10;
+      const availableWidth = window.innerWidth - 10;
+      const availableHeight = window.innerHeight - hHeight - 10;
       const maxSize = Math.min(availableWidth, availableHeight);
       setCanvasDisplaySize({
         width: maxSize,
@@ -91,7 +101,7 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
             console.log("Init received, grid length =", g.length);
           } else if (data.type === "updatePixel") {
             const { x, y, color } = data;
-            setGridData(prev => ({ ...prev, [`${x},${y}`]: color }));
+            setGridData((prev) => ({ ...prev, [`${x},${y}`]: color }));
             ctx.fillStyle = color;
             ctx.fillRect(x, y, 1, 1);
           } else if (data.type === "error") {
@@ -119,7 +129,7 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (!canvas || !ctx) return;
-    
+
     // Restaure le pixel hover précédent s'il existe
     if (prevHoverRef.current) {
       const { x: prevX, y: prevY } = prevHoverRef.current;
@@ -130,10 +140,11 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
 
     // Dessine le nouveau hover s'il existe
     if (hoverPixel) {
-      const originalColor = gridData[`${hoverPixel.x},${hoverPixel.y}`] || "#FFFFFF";
+      const originalColor =
+        gridData[`${hoverPixel.x},${hoverPixel.y}`] || "#FFFFFF";
       ctx.fillStyle = originalColor;
       ctx.fillRect(hoverPixel.x, hoverPixel.y, 1, 1);
-      
+
       ctx.save();
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = "#CCCCCC";
@@ -150,8 +161,10 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const relX = (e.clientX - rect.left) * (dimensions.width / canvasDisplaySize.width);
-    const relY = (e.clientY - rect.top) * (dimensions.height / canvasDisplaySize.height);
+    const relX =
+      (e.clientX - rect.left) * (dimensions.width / canvasDisplaySize.width);
+    const relY =
+      (e.clientY - rect.top) * (dimensions.height / canvasDisplaySize.height);
     const x = Math.floor(relX);
     const y = Math.floor(relY);
     setHoverPixel({ x, y });
@@ -168,13 +181,16 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
 
     // Calculer la position logique du pixel dans la grille
     const rect = canvas.getBoundingClientRect();
-    const relX = (e.clientX - rect.left) * (dimensions.width / canvasDisplaySize.width);
-    const relY = (e.clientY - rect.top) * (dimensions.height / canvasDisplaySize.height);
+    const relX =
+      (e.clientX - rect.left) * (dimensions.width / canvasDisplaySize.width);
+    const relY =
+      (e.clientY - rect.top) * (dimensions.height / canvasDisplaySize.height);
     const x = Math.floor(relX);
     const y = Math.floor(relY);
-    const color = "#FF0000"; // remplacer par la couleur UI
 
-    socket.send(JSON.stringify({ type: "placePixel", x, y, color }));
+    socket.send(
+      JSON.stringify({ type: "placePixel", x, y, color: selectedColor }),
+    );
   };
 
   return (
@@ -188,8 +204,15 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
         className="absolute left-0 right-0 bg-white z-0"
         style={{ top: 0, height: `calc(100vh - ${headerHeight}px)` }}
       />
-      <div className="absolute top-0 left-0 z-20 m-2 bg-white/70 rounded p-1">
-        WebSocket: {connected ? "connecté" : "déconnecté"} (ws://localhost:8080)
+
+      {/* Color Selector - Mobile (top) */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 md:hidden">
+        <PixelSelector onSelect={setSelectedColor} />
+      </div>
+
+      {/* Color Selector - Desktop (left) */}
+      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 hidden md:block">
+        <PixelSelector onSelect={setSelectedColor} />
       </div>
       <canvas
         ref={canvasRef}
