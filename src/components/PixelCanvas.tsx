@@ -17,6 +17,10 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   // Taille d'affichage (CSS) du canvas
   const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 });
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(null);
+  const [gridData, setGridData] = useState<Record<string, string>>({});
+  const prevHoverRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     // Empêche le scroll sur la page
@@ -24,13 +28,11 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
     // Ajuste la taille d'affichage du canvas à tout l'espace disponible sous le header
     const resizeCanvas = () => {
       const header = document.getElementById("header");
-      const headerHeight = header ? header.offsetHeight : 0;
-      const availableWidth = window.innerWidth;
-      const availableHeight = window.innerHeight - headerHeight;
-      
-      // Calcule la taille maximale en gardant le ratio carré (1:1)
+      const hHeight = header ? header.offsetHeight : 0;
+      setHeaderHeight(hHeight);
+      const availableWidth = window.innerWidth -10;
+      const availableHeight = window.innerHeight - hHeight -10;
       const maxSize = Math.min(availableWidth, availableHeight);
-      
       setCanvasDisplaySize({
         width: maxSize,
         height: maxSize,
@@ -77,15 +79,19 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
           const data = JSON.parse(ev.data);
           if (data.type === "init") {
             const g = data.grid as string[];
+            const newGridData: Record<string, string> = {};
             for (let i = 0; i < g.length; i++) {
               const x = i % data.width;
               const y = Math.floor(i / data.width);
+              newGridData[`${x},${y}`] = g[i];
               ctx.fillStyle = g[i];
               ctx.fillRect(x, y, 1, 1);
             }
+            setGridData(newGridData);
             console.log("Init received, grid length =", g.length);
           } else if (data.type === "updatePixel") {
             const { x, y, color } = data;
+            setGridData(prev => ({ ...prev, [`${x},${y}`]: color }));
             ctx.fillStyle = color;
             ctx.fillRect(x, y, 1, 1);
           } else if (data.type === "error") {
@@ -108,6 +114,53 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
     };
   }, [pixelWidth, pixelHeight]);
 
+  // Dessine le pixel hover sans effacer la grille
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+    
+    // Restaure le pixel hover précédent s'il existe
+    if (prevHoverRef.current) {
+      const { x: prevX, y: prevY } = prevHoverRef.current;
+      const originalColor = gridData[`${prevX},${prevY}`] || "#FFFFFF";
+      ctx.fillStyle = originalColor;
+      ctx.fillRect(prevX, prevY, 1, 1);
+    }
+
+    // Dessine le nouveau hover s'il existe
+    if (hoverPixel) {
+      const originalColor = gridData[`${hoverPixel.x},${hoverPixel.y}`] || "#FFFFFF";
+      ctx.fillStyle = originalColor;
+      ctx.fillRect(hoverPixel.x, hoverPixel.y, 1, 1);
+      
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#CCCCCC";
+      ctx.fillRect(hoverPixel.x, hoverPixel.y, 1, 1);
+      ctx.restore();
+    }
+
+    // Met à jour la référence du hover précédent
+    prevHoverRef.current = hoverPixel;
+  }, [hoverPixel, gridData]);
+
+  // Gestion du hover
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) * (dimensions.width / canvasDisplaySize.width);
+    const relY = (e.clientY - rect.top) * (dimensions.height / canvasDisplaySize.height);
+    const x = Math.floor(relX);
+    const y = Math.floor(relY);
+    setHoverPixel({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverPixel(null);
+  };
+
   const placePixel = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     const socket = socketRef.current;
@@ -125,27 +178,17 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
   };
 
   return (
-    <div id="pixel-canvas-parent"
-      style={{
-        position: "relative",
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        overflow: "hidden"
-      }}>
+    <div
+      id="pixel-canvas-parent"
+      className="fixed left-0 right-0 flex justify-center items-center overflow-hidden"
+      style={{ top: headerHeight, height: `calc(100vh - ${headerHeight}px)` }}
+    >
       {/* Fond blanc qui occupe toute la zone sous le header */}
-      <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        background: "#fff",
-        zIndex: 0
-      }} />
-      <div style={{ position: "absolute", top: 0, left: 0, zIndex: 10, margin: 8, background: "rgba(255,255,255,0.7)", borderRadius: 4, padding: 4 }}>
+      <div
+        className="absolute left-0 right-0 bg-white z-0"
+        style={{ top: 0, height: `calc(100vh - ${headerHeight}px)` }}
+      />
+      <div className="absolute top-0 left-0 z-20 m-2 bg-white/70 rounded p-1">
         WebSocket: {connected ? "connecté" : "déconnecté"} (ws://localhost:8080)
       </div>
       <canvas
@@ -157,10 +200,11 @@ export default function PixelCanvas({ pixelWidth = 100, pixelHeight = 100 }: Pix
           width: `${canvasDisplaySize.width}px`,
           height: `${canvasDisplaySize.height}px`,
           imageRendering: "pixelated",
-          border: "1px solid #ddd",
-          zIndex: 1
         }}
+        className="border border-gray-300 z-10"
         onClick={placePixel}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       />
     </div>
   );

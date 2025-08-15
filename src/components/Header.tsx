@@ -10,7 +10,8 @@ const Header: React.FC = () => {
 
   return (
     <header
-      className={`flex items-center justify-between px-6 py-4 ${
+      id="header"
+      className={`flex items-center justify-between px-6 py-4 z-50 ${
         theme === "dark"
           ? "bg-gray-900 text-white"
           : "bg-gray-100 text-gray-900"
