@@ -1,17 +1,18 @@
-import prisma from '@/lib/prisma';
-import { Guild } from '@/types/discord';
+import prisma from "@/lib/prisma";
+import type { Guild } from "@/types/discord";
+import type { DiscordProfile } from "@/types/discord";
 
 async function refreshDiscordToken(refreshToken: string) {
   const body = new URLSearchParams({
     client_id: process.env.DISCORD_CLIENT_ID!,
     client_secret: process.env.DISCORD_CLIENT_SECRET!,
-    grant_type: 'refresh_token',
+    grant_type: "refresh_token",
     refresh_token: refreshToken,
   });
 
-  const response = await fetch('https://discord.com/api/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const response = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
 
@@ -27,110 +28,137 @@ export async function synchronize(data: {
   refreshToken: string;
   accessToken: string;
   discordId: string;
+  prismaUserId?: string; // nouvel argument optionnel : l'id prisma du user à mettre à jour
 }) {
-  const refreshToken = data.refreshToken;
-  let accessToken = data.accessToken;
-  let discordId = data.discordId;
+  const { refreshToken, accessToken: initialAccessToken, discordId } = data;
+  let accessToken = initialAccessToken;
   let newRefreshToken = refreshToken;
-  let profile;
+  let profile: DiscordProfile;
 
   if (!accessToken) {
-    throw new Error('Aucun paramètre n’est renseigné');
+    throw new Error("Aucun access token fourni");
   }
 
   try {
-    // 1. Tentative de récupération du profil
-    let profileResponse = await fetch('https://discord.com/api/users/@me', {
+    let profileResponse = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    console.log('→ Initial Discord status:', profileResponse.status);
-
-    // Gestion du token expiré
     if (profileResponse.status === 401 && refreshToken) {
-      // Rafraîchir les tokens
       const newTokens = await refreshDiscordToken(refreshToken);
-      console.log('→ New Discord tokens:', newTokens);
-
-      // Mettre à jour les tokens
       accessToken = newTokens.access_token;
-      newRefreshToken = newTokens.refresh_token || refreshToken; // Garder l'ancien si non fourni
+      newRefreshToken = newTokens.refresh_token || refreshToken;
 
-      // Réessayer avec le nouveau token
-      profileResponse = await fetch('https://discord.com/api/users/@me', {
+      profileResponse = await fetch("https://discord.com/api/users/@me", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      console.log('→ New Discord status:', profileResponse.status);
     }
 
-    // Lire le corps de la réponse une seule fois
-    const responseText = await profileResponse.text();
-    console.log('→ Discord body:', responseText);
-
+    const text = await profileResponse.text();
     if (!profileResponse.ok) {
-      throw new Error(
-        `Erreur Discord [${profileResponse.status}]: ${responseText}`
-      );
+      throw new Error(`Erreur Discord [${profileResponse.status}]: ${text}`);
     }
-
-    profile = JSON.parse(responseText);
-  } catch (error) {
-    console.error('Erreur réseau:', error);
+    profile = JSON.parse(text);
+  } catch (err) {
+    console.error("Erreur réseau dans synchronize:", err);
     throw new Error("Échec de la connexion à l'API Discord");
   }
 
-  discordId = profile.id;
-
-  // 2. Récupération des guildes pour vérifier le membership
-  console.log('→ Fetching Discord guilds...');
+  // récupération des guildes
   const guildsResponse = await fetch(
-    'https://discord.com/api/users/@me/guilds',
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    "https://discord.com/api/users/@me/guilds",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
   );
-
-  console.log('→ Guilds response status:', guildsResponse.status);
 
   if (!guildsResponse.ok) {
     const guildsErrorText = await guildsResponse.text();
-    console.error('Erreur lors de la récupération des guildes Discord:', guildsErrorText);
-    throw new Error('Erreur lors de la récupération des guildes Discord');
+    console.error(
+      "Erreur lors de la récupération des guildes Discord:",
+      guildsErrorText,
+    );
+    throw new Error("Erreur lors de la récupération des guildes Discord");
   }
 
   const guilds = await guildsResponse.json();
-  console.log('→ Guilds:', guilds.map((g: Guild) => g.name));
-
-  // Vérifier si l'utilisateur est dans la guild spécifique
   const targetGuildId = "1278013961987690599";
-  const isInGuild = guilds.some((guild: Guild) => guild.id === targetGuildId);
-  console.log('→ isInGuild:', isInGuild);
+  const isInGuild = guilds.some((g: Guild) => g.id === targetGuildId);
 
-  // 3. Upsert utilisateur avec mise à jour du join_guild
-  console.log('→ Upserting user in Prisma...');
+  // Si prismaUserId existe, mettre à jour l'utilisateur existant (c'est la bonne pratique)
+  if (data.prismaUserId) {
+    await prisma.user.update({
+      where: { id: data.prismaUserId },
+      data: {
+        // ne change pas l'id Prisma
+        username: profile.username,
+        email: profile.email ?? undefined,
+        image: profile.avatar
+          ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+          : null,
+        global_name: profile.global_name || null,
+        accessToken: accessToken,
+        refreshToken: newRefreshToken,
+        expires: undefined, // si tu veux stocker expires, mappe account.expires_at
+        joinGuild: isInGuild,
+      },
+    });
+    return;
+  }
+
+  // si prismaUserId absent : fallback — upsert par email si possible (éviter upsert par id=discordId)
+  if (profile.email) {
+    await prisma.user.upsert({
+      where: { email: profile.email },
+      update: {
+        username: profile.username,
+        image: profile.avatar
+          ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+          : null,
+        global_name: profile.global_name || null,
+        accessToken,
+        refreshToken: newRefreshToken,
+        joinGuild: isInGuild,
+      },
+      create: {
+        id: discordId, // si tu veux absolument garder l'id discord, ok (optionnel)
+        username: profile.username,
+        email: profile.email,
+        image: profile.avatar
+          ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+          : null,
+        global_name: profile.global_name || null,
+        accessToken,
+        refreshToken: newRefreshToken,
+        joinGuild: isInGuild,
+      },
+    });
+    return;
+  }
+
+  // dernière option: si pas d'email, crée ou update par discordId (moins souhaitable si NextAuth gère id autrement)
   await prisma.user.upsert({
     where: { id: discordId },
     update: {
       username: profile.username,
-      email: profile.email,
       image: profile.avatar
         ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
         : null,
       global_name: profile.global_name || null,
-      accessToken: accessToken,
+      accessToken,
       refreshToken: newRefreshToken,
-      join_guild: isInGuild,
+      joinGuild: isInGuild,
     },
     create: {
       id: discordId,
       username: profile.username,
-      email: profile.email,
       image: profile.avatar
         ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
         : null,
       global_name: profile.global_name || null,
-      accessToken: accessToken,
+      accessToken,
       refreshToken: newRefreshToken,
-      join_guild: isInGuild,
+      joinGuild: isInGuild,
     },
   });
-  console.log('→ User upsert completed.');
 }

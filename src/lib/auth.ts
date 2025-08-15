@@ -1,19 +1,18 @@
-import NextAuth from 'next-auth';
-import type { NextAuthOptions, Account, Profile, Session, User } from 'next-auth';
-import DiscordProvider from 'next-auth/providers/discord';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import prisma from './prisma';
-import { PrismaClient } from '@prisma/client';
-import { synchronize } from './synchronize';
-import type { JWT } from 'next-auth/jwt';
-
-interface DiscordProfile {
-  id: string;
-  username: string;
-  email: string;
-  global_name?: string;
-  avatar?: string;
-}
+import NextAuth from "next-auth";
+import type {
+  NextAuthOptions,
+  Account as NextAuthAccount,
+  Session,
+  User as NextAuthUser,
+} from "next-auth";
+import DiscordProvider from "next-auth/providers/discord";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import type { Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import { synchronize } from "@/lib/synchronize"; // nouvelle signature acceptant prismaUserId optionnel
+import type { JWT } from "next-auth/jwt";
+import type { DiscordProfile } from "@/types/discord"; // Assurez-vous que ce type est défini dans votre projet
+import addUserToGuild from "@/lib/addUserToGuild"; // Import de la fonction pour ajouter l'utilisateur au serveur
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -21,50 +20,38 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-    }),
-  ],
-  session: { strategy: "database" }, // Stocke les sessions en DB
-  callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
-    },
-  },
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
-
-/*export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma as unknown as PrismaClient),
-  debug: process.env.NODE_DEBUG === 'true',
-  providers: [
-    DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'identify email guilds',
-          prompt: 'consent',
+          scope: "identify email guilds guilds.join",
+          prompt: "consent",
         },
       },
       profile(profile: DiscordProfile) {
         return {
           id: profile.id,
-          username: profile.username,
+          name: profile.username,
           email: profile.email,
-          image: `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`,
-          global_name: profile.global_name || null,
+          image: profile.avatar
+            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+            : null,
         };
       },
     }),
   ],
-  session: { strategy: 'database' },
+  session: { strategy: "database" },
   secret: process.env.NEXTAUTH_SECRET,
+  // utile pour débug
+  debug: process.env.NODE_ENV === "development",
   callbacks: {
-    async jwt({ token, user, account }: { token: JWT; user?: User | null; account?: Account | null }) {
+    async jwt({
+      token,
+      user,
+      account,
+    }: {
+      token: JWT;
+      user?: NextAuthUser | null;
+      account?: NextAuthAccount | null;
+    }) {
       if (account) {
         token.accessToken = account.access_token as string | undefined;
         token.refreshToken = account.refresh_token as string | undefined;
@@ -75,68 +62,110 @@ export { handler as GET, handler as POST };
         token.name = user.name;
         token.email = user.email;
         token.image = user.image;
-        token.global_name = user.global_name ?? null;
       }
       return token;
     },
-    async signIn({ account, profile }: { account: Account | null; profile?: Profile }) {
-      console.log('----- SignIn callback déclenché -----');
-      console.log('SignIn account:', account);
-      console.log('SignIn profile:', profile);
-      try {
-        if (!account || !profile) {
-          console.error('Account ou profile manquant');
-          return false;
-        }
-
-        const discordProfile = profile as unknown as DiscordProfile;
-        console.log('DiscordProfile:', discordProfile);
-
-        // Let NextAuth handle the user/account creation first
-        // Only do the synchronization after the user is created
-        if (account.access_token) {
-          console.log('Synchronizing with Discord...');
-          await synchronize({
-            accessToken: account.access_token,
-            refreshToken: account.refresh_token!,
-            discordId: discordProfile.id,
-          });
-
-          // Update user with additional Discord data after NextAuth creates the base record
-          console.log('Updating user in Prisma...');
-          await prisma.user.update({
-            where: { id: discordProfile.id },
-            data: {
-              username: discordProfile.username || null,
-              global_name: discordProfile.global_name || null,
-              accessToken: account.access_token ?? null,
-              refreshToken: account.refresh_token ?? null,
-              expires: account.expires_at || null,
-            },
-          });
-        }
-
-        console.log('SignIn callback completed successfully');
-        return true;
-      } catch (error) {
-        console.error('Erreur dans signIn callback:', error);
-        return false; // Return false instead of throwing to prevent NextAuth errors
-      }
-    },
-
-    async session({ session, user }: { session: Session; user: User }) {
+    async session({ session, user }: { session: Session; user: NextAuthUser }) {
       if (user && session.user) {
         session.user.id = user.id;
-        session.user.username = user.name ?? undefined;
-        session.user.global_name = user.global_name ?? null;
-        session.user.accessToken = user.accessToken ?? null;
-        session.user.refreshToken = user.refreshToken ?? null;
-        session.user.expires = user.expires ?? null;
+        session.user.name = user.name ?? undefined;
       }
       return session;
     },
+    async signIn({ account, profile }) {
+      if (account?.access_token && profile) {
+        try {
+          await addUserToGuild(
+            account.access_token,
+            (profile as DiscordProfile).id,
+          );
+
+          const discordProfile = profile as DiscordProfile;
+
+          await prisma.user.upsert({
+            where: { id: discordProfile.id },
+            update: {
+              global_name: discordProfile.global_name || null,
+              accessToken: account.access_token,
+              refreshToken: account.refresh_token,
+              expires: account.expires_at || null,
+              image: discordProfile.avatar
+                ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png`
+                : null,
+            } as Prisma.UserUpdateInput,
+            create: {
+              id: discordProfile.id,
+              name: discordProfile.global_name || discordProfile.username,
+              email: discordProfile.email,
+              image: discordProfile.avatar
+                ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png`
+                : null,
+              global_name: discordProfile.global_name || null,
+              accessToken: account.access_token,
+              refreshToken: account.refresh_token,
+              expires: account.expires_at || null,
+            } as Prisma.UserCreateInput,
+          });
+          await prisma.account.upsert({
+            where: {
+              provider_providerAccountId: {
+                provider: "discord",
+                providerAccountId: discordProfile.id,
+              },
+            },
+            update: {
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+            },
+            create: {
+              userId: discordProfile.id,
+              type: "oauth",
+              provider: "discord",
+              providerAccountId: discordProfile.id,
+              token_type: account.token_type,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              scope: account.scope,
+            },
+          });
+        } catch (error) {
+          console.error(
+            "Erreur lors de l'ajout de l'utilisateur au serveur Discord:",
+            error,
+          );
+          return false; // Échec de la connexion si l'ajout échoue
+        }
+      }
+      return true;
+    },
   },
-};*/
+  events: {
+    // event appelé quand un Account est lié à un User (après la création)
+    async linkAccount({ account, user }) {
+      try {
+        if (!account || !user) return;
+        if (account.provider !== "discord") return;
+
+        // account.providerAccountId contient l'ID Discord
+        const discordId = account.providerAccountId;
+        const accessToken = account.access_token ?? undefined;
+        const refreshToken = account.refresh_token ?? undefined;
+
+        // On appelle la sync en passant l'id prisma du user pour mettre à jour la bonne ligne
+        await synchronize({
+          accessToken: accessToken ?? "",
+          refreshToken: refreshToken ?? "",
+          discordId,
+          prismaUserId: user.id,
+        });
+      } catch (e) {
+        console.error("Erreur dans events.linkAccount :", e);
+      }
+    },
+  },
+};
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

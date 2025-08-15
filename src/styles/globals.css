@@ -4,13 +4,36 @@
 
 :root {
   --background: #ffffff;
+  --accent: #acfaf5; /* couleur fournie */
+  --accent-600: #7fd9d9; /* teinte plus soutenue */
+  --text: #0f172a; /* texte principal (dark navy) */
+  --muted: #6b7280;
+  --glass: rgba(172, 250, 245, 0.12);
+}
+
+/* Mode sombre activable en ajoutant `data-theme="dark"` sur <html> ou <body> */
+.dark {
+  --background: #06121a;
+  --text: #e6f8f7;
+  --muted: #94a3b8;
+  --accent: #acfaf5;
+  --accent-600: #3fbfbf;
+  --glass: rgba(172, 250, 245, 0.06);
 }
 
 html,
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
   background-color: var(--background);
-  color: black;
+  color: var(--text);
   line-height: 1.5;
 }
 

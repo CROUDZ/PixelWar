@@ -21,3 +21,11 @@ export interface Guild {
   roles: Role[];
   channels: Channel[];
 }
+
+export interface DiscordProfile {
+  id: string;
+  username: string;
+  avatar: string | null;
+  email?: string;
+  global_name?: string | null;
+}

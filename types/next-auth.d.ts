@@ -1,7 +1,7 @@
-import { DefaultSession, DefaultUser } from 'next-auth';
-import { JWT as DefaultJWT } from 'next-auth/jwt';
+import { DefaultSession, DefaultUser } from "next-auth";
+import { JWT as DefaultJWT } from "next-auth/jwt";
 
-declare module 'next-auth' {
+declare module "next-auth" {
   interface User extends DefaultUser {
     id: string; // ensure id always present (from Discord id)
     username?: string; // optional, if you want to keep it
@@ -19,11 +19,11 @@ declare module 'next-auth' {
       accessToken?: string | null;
       refreshToken?: string | null;
       expires?: number | null;
-    } & DefaultSession['user'];
+    } & DefaultSession["user"];
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
     username?: string; // optional, if you want to keep it

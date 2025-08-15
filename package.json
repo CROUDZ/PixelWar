@@ -8,18 +8,30 @@
     "clean": "rm -rf dist .next node_modules",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dev:all": "concurrently \"npm run server:dev\" \"npm run dev\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name migrate",
+    "prisma:reset": "prisma migrate reset --force --skip-seed",
+    "prisma:clear": "rm -rf prisma/migrations && rm -rf node_modules/.prisma",
+    "prisma:dev_update": "npm run prisma:clear && npm run prisma:reset && npm run prisma:migrate && npm run prisma:generate",
+    "redis:start": "sudo systemctl enable redis && sudo systemctl start redis && node server.js"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "critters": "^0.0.23",
     "framer-motion": "^12.20.2",
+    "ioredis": "^5.7.0",
+    "lucide-react": "^0.539.0",
     "next": "15.3.4",
     "next-auth": "^4.24.11",
     "prettier": "^3.6.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -28,6 +40,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "prisma": "^6.14.0",

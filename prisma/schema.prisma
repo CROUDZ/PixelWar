@@ -18,10 +18,12 @@ model Account {
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id_token          String? @db.Text // Ignore
+  session_state     String? // Ignore
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  //@@map("account")
 
   @@unique([provider, providerAccountId])
 }
@@ -36,73 +38,41 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
+  id            String        @id @default(cuid())
+  name          String? // Ignore
+  email         String?       @unique
+  emailVerified DateTime? // Ignore
   image         String?
+  username      String?       @unique
+  global_name   String?
+  accessToken   String?
+  refreshToken  String?
+  expires       Int?
+  joinGuild     Boolean       @default(false)
+  role          Role          @default(USER)
   accounts      Account[]
   sessions      Session[]
+  pixelActions  PixelAction[]
+
+  //@@map("user")
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+model PixelAction {
+  id         String   @id @default(cuid())
+  x          Int
+  y          Int
+  colorIndex Int
+  userId     String?
+  createdAt  DateTime @default(now())
 
-  @@unique([identifier, token])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([x, y])
+  @@index([createdAt])
 }
 
-/**
- * generator client {
- * provider = "prisma-client-js"
- * }
- * datasource db {
- * provider = "postgresql"
- * url      = env("DATABASE_URL")
- * }
- * model User {
- * id           String    @id @default(cuid())
- * email        String?   @unique
- * image        String?
- * global_name  String?
- * role         Role      @default(USER)
- * accessToken  String?
- * refreshToken String?
- * expires      Int?
- * join_guild   Boolean   @default(false)
- * username     String?
- * accounts     Account[]
- * sessions     Session[]
- * @@map("user")
- * }
- * model Account {
- * id                String  @id @default(cuid())
- * provider          String
- * providerAccountId String
- * type              String
- * token_type        String?
- * access_token      String?
- * refresh_token     String?
- * expires_at        Int?
- * scope             String?
- * userId            String
- * user              User    @relation(fields: [userId], references: [id], onDelete: Cascade) // Relation explicite à User
- * @@unique([provider, providerAccountId])
- * @@map("account")
- * }
- * model Session {
- * id           String   @id @default(cuid())
- * sessionToken String   @unique
- * userId       String
- * expires      DateTime
- * join_guild   Boolean  @default(false)
- * user         User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Relation explicite à User
- * @@map("session")
- * }
- * enum Role {
- * USER
- * MODERATOR
- * ADMIN
- * }
- */
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
