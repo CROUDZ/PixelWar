@@ -1,12 +1,14 @@
 // server.js (CommonJS)
 import WebSocket, { WebSocketServer } from "ws";
 import redis from "redis";
+import prisma from "./prisma.js";
 
 const PORT = 8080;
 const GRID_KEY = "pixel-grid";
 const WIDTH = 500;
 const HEIGHT = 500;
 const DEFAULT_COLOR = "#FFFFFF";
+const COOLDOWN_DURATION = 60 * 1000; // 60 secondes en millisecondes
 
 (async () => {
   // Création et connexion Redis (v4+)
@@ -76,17 +78,49 @@ const DEFAULT_COLOR = "#FFFFFF";
         if (typeof x !== "number" || typeof y !== "number") return;
         if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
 
-        // cooldown simple : 60s by default
-        const key = userId || ws._id;
-        const now = Date.now();
-        const last = lastPlaced.get(key) || 0;
-        const COOLDOWN = (data.booster ? 45 : 60) * 1000;
-        if (now - last < COOLDOWN) {
-          // Optionnel : renvoyer un message d'erreur
-          ws.send(JSON.stringify({ type: "error", message: "Cooldown" }));
-          return;
+        // Vérification du cooldown côté serveur
+        if (userId) {
+          try {
+            const user = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { lastPixelPlaced: true }
+            });
+
+            if (user && user.lastPixelPlaced) {
+              const now = new Date();
+              const timeSinceLastPixel = now.getTime() - user.lastPixelPlaced.getTime();
+              
+              if (timeSinceLastPixel < COOLDOWN_DURATION) {
+                const cooldownRemaining = Math.ceil((COOLDOWN_DURATION - timeSinceLastPixel) / 1000);
+                ws.send(JSON.stringify({ 
+                  type: "error", 
+                  message: `Cooldown actif: ${cooldownRemaining}s restantes`
+                }));
+                return;
+              }
+            }
+
+            // Mettre à jour le lastPixelPlaced
+            await prisma.user.update({
+              where: { id: userId },
+              data: { lastPixelPlaced: new Date() }
+            });
+          } catch (error) {
+            console.error('Erreur lors de la vérification du cooldown:', error);
+            ws.send(JSON.stringify({ type: "error", message: "Erreur serveur" }));
+            return;
+          }
+        } else {
+          // Fallback pour les utilisateurs non authentifiés (ancien système)
+          const key = ws._id;
+          const now = Date.now();
+          const last = lastPlaced.get(key) || 0;
+          if (now - last < COOLDOWN_DURATION) {
+            ws.send(JSON.stringify({ type: "error", message: "Cooldown" }));
+            return;
+          }
+          lastPlaced.set(key, now);
         }
-        lastPlaced.set(key, now);
 
         // Update in-memory grid
         grid[y * WIDTH + x] = color;

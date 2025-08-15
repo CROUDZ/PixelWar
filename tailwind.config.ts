@@ -20,6 +20,14 @@ const config: Config = {
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
+      colors: {
+        background: 'var(--background)',
+        accent: 'var(--accent)',
+        'accent-600': 'var(--accent-600)',
+        text: 'var(--text)',
+        muted: 'var(--muted)',
+        glass: 'var(--glass)',
+      },
     },
   },
   plugins: [],

@@ -38,21 +38,22 @@ model Session {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String? // Ignore
-  email         String?       @unique
-  emailVerified DateTime? // Ignore
-  image         String?
-  username      String?       @unique
-  global_name   String?
-  accessToken   String?
-  refreshToken  String?
-  expires       Int?
-  joinGuild     Boolean       @default(false)
-  role          Role          @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  pixelActions  PixelAction[]
+  id              String        @id @default(cuid())
+  name            String? // Ignore
+  email           String?       @unique
+  emailVerified   DateTime? // Ignore
+  image           String?
+  username        String?       @unique
+  global_name     String?
+  accessToken     String?
+  refreshToken    String?
+  expires         Int?
+  joinGuild       Boolean       @default(false)
+  role            Role          @default(USER)
+  lastPixelPlaced DateTime?
+  accounts        Account[]
+  sessions        Session[]
+  pixelActions    PixelAction[]
 
   //@@map("user")
 }
