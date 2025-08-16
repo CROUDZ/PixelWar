@@ -3,8 +3,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import PixelSelector from "@/components/PixelSelector";
 import ValidePixel from "@/components/ValidePixel";
 import { useSession } from "next-auth/react";
-
-const WS_URL = "ws://localhost:8080";
+import { getWS, subscribeWS } from "@/lib/ws";
 
 interface PixelCanvasProps {
   pixelWidth?: number;
@@ -16,15 +15,19 @@ export default function PixelCanvas({
   pixelHeight = 100,
 }: PixelCanvasProps) {
   const { data: session } = useSession();
-  console.log("Session data:", session?.user?.lastPixelPlaced);
-  const userId = session?.user?.id
+  const userId = session?.user?.id;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 });
+  const [canvasDisplaySize, setCanvasDisplaySize] = useState({
+    width: 0,
+    height: 0,
+  });
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(null);
+  const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [gridData, setGridData] = useState<Record<string, string>>({});
   const [selectedColor, setSelectedColor] = useState("#FF0000");
 
@@ -39,20 +42,27 @@ export default function PixelCanvas({
   const [isMobile, setIsMobile] = useState(false);
 
   const [showValidation, setShowValidation] = useState(false);
-  const [validationPixel, setValidationPixel] = useState<{ x: number; y: number; color: string } | null>(null);
+  const [validationPixel, setValidationPixel] = useState<{
+    x: number;
+    y: number;
+    color: string;
+  } | null>(null);
 
-  const screenToGrid = useCallback((screenX: number, screenY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const canvasX = screenX - rect.left;
-    const canvasY = screenY - rect.top;
-    const pixelSize = canvasDisplaySize.width / dimensions.width;
-    return {
-      x: Math.floor((canvasX / zoom - pan.x) / pixelSize),
-      y: Math.floor((canvasY / zoom - pan.y) / pixelSize),
-    };
-  }, [canvasDisplaySize, dimensions, zoom, pan]);
+  const screenToGrid = useCallback(
+    (screenX: number, screenY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = screenX - rect.left;
+      const canvasY = screenY - rect.top;
+      const pixelSize = canvasDisplaySize.width / dimensions.width;
+      return {
+        x: Math.floor((canvasX / zoom - pan.x) / pixelSize),
+        y: Math.floor((canvasY / zoom - pan.y) / pixelSize),
+      };
+    },
+    [canvasDisplaySize, dimensions, zoom, pan],
+  );
 
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -80,76 +90,79 @@ export default function PixelCanvas({
     ctx.save();
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#2222FF";
-    ctx.strokeRect(0, 0, dimensions.width * pixelSize, dimensions.height * pixelSize);
+    ctx.strokeRect(
+      0,
+      0,
+      dimensions.width * pixelSize,
+      dimensions.height * pixelSize,
+    );
     ctx.restore();
     ctx.restore();
   }, [zoom, pan, dimensions, canvasDisplaySize, gridData, hoverPixel]);
 
+  // Dans votre PixelCanvas, remplacez cette partie :
+
   useEffect(() => {
     setDimensions({ width: pixelWidth, height: pixelHeight });
 
-    let shouldStop = false;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    const reconnectTimeout: NodeJS.Timeout | null = null;
 
-    const connect = () => {
-      const socket = new WebSocket(WS_URL);
-      socketRef.current = socket;
+    const socket = getWS();
+    socketRef.current = socket;
 
-      socket.onopen = () => console.log("WebSocket connected");
-      socket.onerror = (err) => console.error("WS error", err);
-      socket.onclose = (ev) => {
-        console.log("WS closed", ev.reason || ev.code);
-        if (!shouldStop) reconnectTimeout = setTimeout(connect, 1000);
-      };
-
-      socket.onmessage = (ev) => {
-        try {
-          const data = JSON.parse(ev.data);
-          if (data.type === "init") {
-            const g = data.grid as string[];
-            const newGridData: Record<string, string> = {};
-            for (let i = 0; i < g.length; i++) {
-              const x = i % data.width;
-              const y = Math.floor(i / data.width);
-              newGridData[`${x},${y}`] = g[i];
-            }
-            setGridData(newGridData);
-          } else if (data.type === "updatePixel") {
-            const { x, y, color } = data;
-            setGridData((prev) => ({ ...prev, [`${x},${y}`]: color }));
+    const unsubscribe = subscribeWS((data) => {
+      try {
+        if (data.type === "init") {
+          const g = data.grid as string[];
+          const newGridData: Record<string, string> = {};
+          for (let i = 0; i < g.length; i++) {
+            const x = i % (data.width as number);
+            const y = Math.floor(i / (data.width as number));
+            newGridData[`${x},${y}`] = g[i];
           }
-        } catch (e) {
-          console.error("Bad message from server", e);
+          setGridData(newGridData);
+        } else if (data.type === "updatePixel") {
+          const { x, y, color } = data as {
+            x: number;
+            y: number;
+            color: string;
+          };
+          setGridData((prev) => ({ ...prev, [`${x},${y}`]: color }));
         }
-      };
-    };
+      } catch (e) {
+        console.error("Bad message from server", e);
+      }
+    });
 
-    connect();
     return () => {
-      shouldStop = true;
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      socketRef.current?.close();
+      unsubscribe();
     };
   }, [pixelWidth, pixelHeight]);
-
   // Canvas setup, resizing, navigation mode...
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768 || "ontouchstart" in window);
+    const checkMobile = () =>
+      setIsMobile(window.innerWidth <= 768 || "ontouchstart" in window);
     const resizeCanvas = () => {
       const header = document.getElementById("header");
       setHeaderHeight(header ? header.offsetHeight : 0);
-      const maxSize = Math.min(window.innerWidth - 10, window.innerHeight - (header ? header.offsetHeight : 0) - 10);
+      const maxSize = Math.min(
+        window.innerWidth - 10,
+        window.innerHeight - (header ? header.offsetHeight : 0) - 10,
+      );
       setCanvasDisplaySize({ width: maxSize, height: maxSize });
       checkMobile();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isMobile && (e.key === "Shift" || e.key === "Control")) setIsNavigationMode(true);
+      if (!isMobile && (e.key === "Shift" || e.key === "Control"))
+        setIsNavigationMode(true);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (!isMobile && (e.key === "Shift" || e.key === "Control")) setIsNavigationMode(false);
+      if (!isMobile && (e.key === "Shift" || e.key === "Control"))
+        setIsNavigationMode(false);
     };
 
     const canvasElement = canvasRef.current;
@@ -171,8 +184,9 @@ export default function PixelCanvas({
     window.addEventListener("resize", resizeCanvas);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    if (canvasElement) canvasElement.addEventListener("wheel", wheelHandler, { passive: false });
-    
+    if (canvasElement)
+      canvasElement.addEventListener("wheel", wheelHandler, { passive: false });
+
     resizeCanvas();
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) ctxRef.current = ctx;
@@ -181,7 +195,8 @@ export default function PixelCanvas({
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-      if (canvasElement) canvasElement.removeEventListener("wheel", wheelHandler);
+      if (canvasElement)
+        canvasElement.removeEventListener("wheel", wheelHandler);
       document.body.style.overflow = "";
     };
   }, [isMobile, zoom]);
@@ -210,12 +225,20 @@ export default function PixelCanvas({
     const deltaY = e.clientY - lastMousePos.y;
     if (isDragging) {
       setHasDragged(true);
-      setPan((prev) => ({ x: prev.x + deltaX / zoom, y: prev.y + deltaY / zoom }));
+      setPan((prev) => ({
+        x: prev.x + deltaX / zoom,
+        y: prev.y + deltaY / zoom,
+      }));
       setLastMousePos({ x: e.clientX, y: e.clientY });
       return;
     }
     const gridPos = screenToGrid(e.clientX, e.clientY);
-    if (gridPos.x >= 0 && gridPos.x < dimensions.width && gridPos.y >= 0 && gridPos.y < dimensions.height) {
+    if (
+      gridPos.x >= 0 &&
+      gridPos.x < dimensions.width &&
+      gridPos.y >= 0 &&
+      gridPos.y < dimensions.height
+    ) {
       setHoverPixel(gridPos);
     } else {
       setHoverPixel(null);
@@ -226,7 +249,12 @@ export default function PixelCanvas({
     setIsDragging(false);
     if (!hasDragged) {
       const gridPos = screenToGrid(e.clientX, e.clientY);
-      if (gridPos.x >= 0 && gridPos.x < dimensions.width && gridPos.y >= 0 && gridPos.y < dimensions.height) {
+      if (
+        gridPos.x >= 0 &&
+        gridPos.x < dimensions.width &&
+        gridPos.y >= 0 &&
+        gridPos.y < dimensions.height
+      ) {
         setHoverPixel(gridPos);
       } else setHoverPixel(null);
     }
@@ -245,7 +273,11 @@ export default function PixelCanvas({
       const gridPos = screenToGrid(touch.clientX, touch.clientY);
       const socket = socketRef.current;
       if (socket && socket.readyState === WebSocket.OPEN) {
-        setValidationPixel({ x: gridPos.x, y: gridPos.y, color: selectedColor });
+        setValidationPixel({
+          x: gridPos.x,
+          y: gridPos.y,
+          color: selectedColor,
+        });
         setShowValidation(true);
         return;
       }
@@ -253,7 +285,12 @@ export default function PixelCanvas({
       setLastMousePos({ x: touch.clientX, y: touch.clientY });
     } else if (e.touches.length === 2) {
       const [touch1, touch2] = [e.touches[0], e.touches[1]];
-      setLastTouchDistance(Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY));
+      setLastTouchDistance(
+        Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY,
+        ),
+      );
       setIsDragging(false);
     }
   };
@@ -262,12 +299,21 @@ export default function PixelCanvas({
     e.preventDefault();
     if (e.touches.length === 1 && isDragging) {
       const { clientX, clientY } = e.touches[0];
-      setPan((prev) => ({ x: prev.x + (clientX - lastMousePos.x) / zoom, y: prev.y + (clientY - lastMousePos.y) / zoom }));
+      setPan((prev) => ({
+        x: prev.x + (clientX - lastMousePos.x) / zoom,
+        y: prev.y + (clientY - lastMousePos.y) / zoom,
+      }));
       setLastMousePos({ x: clientX, y: clientY });
     } else if (e.touches.length === 2) {
       const [touch1, touch2] = [e.touches[0], e.touches[1]];
-      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-      if (lastTouchDistance > 0) setZoom(Math.max(0.5, Math.min(10, zoom * (distance / lastTouchDistance))));
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY,
+      );
+      if (lastTouchDistance > 0)
+        setZoom(
+          Math.max(0.5, Math.min(10, zoom * (distance / lastTouchDistance))),
+        );
       setLastTouchDistance(distance);
     }
   };
@@ -285,7 +331,12 @@ export default function PixelCanvas({
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
     const gridPos = screenToGrid(e.clientX, e.clientY);
-    if (gridPos.x >= 0 && gridPos.x < dimensions.width && gridPos.y >= 0 && gridPos.y < dimensions.height) {
+    if (
+      gridPos.x >= 0 &&
+      gridPos.x < dimensions.width &&
+      gridPos.y >= 0 &&
+      gridPos.y < dimensions.height
+    ) {
       setValidationPixel({ x: gridPos.x, y: gridPos.y, color: selectedColor });
       setShowValidation(true);
     }
@@ -308,11 +359,24 @@ export default function PixelCanvas({
   };
 
   const getCursorStyle = () =>
-    isDragging && hasDragged ? "grabbing" : isMobile ? "crosshair" : isNavigationMode ? "grab" : "crosshair";
+    isDragging && hasDragged
+      ? "grabbing"
+      : isMobile
+        ? "crosshair"
+        : isNavigationMode
+          ? "grab"
+          : "crosshair";
 
   return (
-    <div id="pixel-canvas-parent" className="fixed left-0 right-0 flex justify-center items-center overflow-hidden" style={{ top: headerHeight, height: `calc(100vh - ${headerHeight}px)` }}>
-      <div className="absolute left-0 right-0 bg-white z-0" style={{ top: 0, height: `calc(100vh - ${headerHeight}px)` }} />
+    <div
+      id="pixel-canvas-parent"
+      className="fixed left-0 right-0 flex justify-center items-center overflow-hidden"
+      style={{ top: headerHeight, height: `calc(100vh - ${headerHeight}px)` }}
+    >
+      <div
+        className="absolute left-0 right-0 bg-white z-0"
+        style={{ top: 0, height: `calc(100vh - ${headerHeight}px)` }}
+      />
 
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 md:hidden">
         <PixelSelector onSelect={setSelectedColor} />
@@ -322,14 +386,34 @@ export default function PixelCanvas({
       </div>
 
       <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
-        <button onClick={() => setZoom((prev) => Math.min(10, prev * 1.2))} className="bg-white border border-gray-300 p-2 rounded shadow hover:bg-gray-50">+</button>
-        <button onClick={() => setZoom((prev) => Math.max(0.5, prev / 1.2))} className="bg-white border border-gray-300 p-2 rounded shadow hover:bg-gray-50">-</button>
-        <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="bg-white border border-gray-300 p-1 text-xs rounded shadow hover:bg-gray-50">Reset</button>
+        <button
+          onClick={() => setZoom((prev) => Math.min(10, prev * 1.2))}
+          className="bg-white border border-gray-300 p-2 rounded shadow hover:bg-gray-50"
+        >
+          +
+        </button>
+        <button
+          onClick={() => setZoom((prev) => Math.max(0.5, prev / 1.2))}
+          className="bg-white border border-gray-300 p-2 rounded shadow hover:bg-gray-50"
+        >
+          -
+        </button>
+        <button
+          onClick={() => {
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          className="bg-white border border-gray-300 p-1 text-xs rounded shadow hover:bg-gray-50"
+        >
+          Reset
+        </button>
       </div>
 
       {!isMobile && (
         <div className="absolute top-4 right-4 z-20 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
-          {isNavigationMode ? "Mode Navigation (Shift/Ctrl) - Glissez pour naviguer" : "Cliquez pour placer un pixel - Maintenez Shift/Ctrl + Glissez pour naviguer"}
+          {isNavigationMode
+            ? "Mode Navigation (Shift/Ctrl) - Glissez pour naviguer"
+            : "Cliquez pour placer un pixel - Maintenez Shift/Ctrl + Glissez pour naviguer"}
         </div>
       )}
 
@@ -341,7 +425,13 @@ export default function PixelCanvas({
 
       <canvas
         ref={canvasRef}
-        style={{ display: "block", width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px`, imageRendering: "pixelated", cursor: getCursorStyle() }}
+        style={{
+          display: "block",
+          width: `${canvasDisplaySize.width}px`,
+          height: `${canvasDisplaySize.height}px`,
+          imageRendering: "pixelated",
+          cursor: getCursorStyle(),
+        }}
         className="border border-gray-300 z-10"
         onClick={placePixel}
         onMouseDown={handleMouseDown}

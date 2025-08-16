@@ -24,8 +24,16 @@ const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFF";
 
 const FLUSH_INTERVAL_MS = Number(process.env.FLUSH_INTERVAL_MS || 100); // consumer flush
 const BATCH_MAX = Number(process.env.BATCH_MAX || 1000); // items per DB write
-const DEFAULT_COOLDOWN_MS = Number(process.env.COOLDOWN_MS || 30_000); // 30s cooldown
 const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000); // debounce Redis grid SAVE
+
+let totalPixels = 0;
+
+async function initCounter() {
+  console.log("Initializing pixel counter...");
+  totalPixels = await prisma.pixelAction.count();
+  console.log("Total pixels:", totalPixels);
+}
+initCounter();
 
 (async () => {
   // --- Redis client v4 ---
@@ -47,7 +55,10 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
         }
         grid = parsed;
       } catch (e) {
-        console.warn("Grid corrupted or invalid, reinitializing:", e.message || e);
+        console.warn(
+          "Grid corrupted or invalid, reinitializing:",
+          e.message || e,
+        );
         grid = new Array(WIDTH * HEIGHT).fill(DEFAULT_COLOR);
         await client.set(GRID_KEY, JSON.stringify(grid));
       }
@@ -68,9 +79,6 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
   // Note: buffer is now persisted into Redis queue (RPUSH) to avoid data loss on crash.
   // But we keep a small in-memory buffer length metric.
   let flushing = false;
-
-  // cooldown map per user or socket id
-  const lastPlaced = new Map();
 
   // --- Debounced save of grid to Redis (avoid SET every pixel) ---
   let saveScheduled = false;
@@ -120,7 +128,10 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
     try {
       await client.rPush(QUEUE_KEY, JSON.stringify(item));
     } catch (e) {
-      console.error("Failed to push to Redis queue, fallback to in-memory (risky):", e);
+      console.error(
+        "Failed to push to Redis queue, fallback to in-memory (risky):",
+        e,
+      );
       // As fallback, try to keep in memory by unshift to a small array (not implemented here).
       // Better to alert and restart consumer.
     }
@@ -146,13 +157,15 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
       await client.lTrim(QUEUE_KEY, items.length, -1);
 
       // Parse payload
-      const toWrite = items.map((s) => {
-        try {
-          return JSON.parse(s);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
+      const toWrite = items
+        .map((s) => {
+          try {
+            return JSON.parse(s);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
 
       if (toWrite.length === 0) {
         flushing = false;
@@ -167,7 +180,9 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
         userId: p.userId ?? null,
       }));
 
-      const userIds = Array.from(new Set(payload.map((p) => p.userId).filter(Boolean)));
+      const userIds = Array.from(
+        new Set(payload.map((p) => p.userId).filter(Boolean)),
+      );
 
       // Transaction: createMany + updateMany for users' lastPixelPlaced
       await prisma.$transaction(async (tx) => {
@@ -188,7 +203,9 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
       });
 
       // Success: log basic metric
-      console.log(`Flushed ${payload.length} pixel(s) to DB (users updated: ${userIds.length})`);
+      console.log(
+        `Flushed ${payload.length} pixel(s) to DB (users updated: ${userIds.length})`,
+      );
     } catch (err) {
       console.error("Error flushing Redis queue to DB:", err);
       // In case of error (DB down...), items were already removed from list.
@@ -251,7 +268,7 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
     try {
       await client.quit();
     } catch (e) {
-     console.error("Error disconnecting Redis:", e);
+      console.error("Error disconnecting Redis:", e);
     }
 
     try {
@@ -272,7 +289,15 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
 
     // send init (grid snapshot)
     try {
-      ws.send(JSON.stringify({ type: "init", width: WIDTH, height: HEIGHT, grid }));
+      ws.send(
+        JSON.stringify({
+          type: "init",
+          width: WIDTH,
+          height: HEIGHT,
+          grid,
+          totalPixels,
+        }),
+      );
     } catch (e) {
       console.warn("Failed to send init to client", e);
     }
@@ -291,16 +316,6 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
         if (!place) return;
 
         const key = place.userId || ws._id;
-        const now = Date.now();
-        const last = lastPlaced.get(key) || 0;
-        const COOLDOWN = typeof data.booster === "boolean" && data.booster ? DEFAULT_COOLDOWN_MS * 0.75 : DEFAULT_COOLDOWN_MS;
-        if (now - last < COOLDOWN) {
-          try {
-            ws.send(JSON.stringify({ type: "error", message: "Cooldown", retryAfterMs: COOLDOWN - (now - last) }));
-          } catch {}
-          return;
-        }
-        lastPlaced.set(key, now);
 
         // update in-memory grid (latest state)
         const idx = place.y * WIDTH + place.x;
@@ -310,7 +325,16 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
         scheduleSaveGrid();
 
         // push the pixel event to Redis queue for durable batch persistence
-        await pushToQueue({ x: place.x, y: place.y, color: place.color, userId: place.userId ?? null, timestamp: now });
+        const now = Date.now();
+        await pushToQueue({
+          x: place.x,
+          y: place.y,
+          color: place.color,
+          userId: place.userId ?? null,
+          timestamp: now,
+        });
+
+        totalPixels += 1;
 
         // broadcast immediately to clients
         broadcast({
@@ -320,6 +344,7 @@ const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
           color: place.color,
           userId: key,
           timestamp: now,
+          totalPixels,
         });
 
         // If queue length is large, trigger a flush (non-blocking)

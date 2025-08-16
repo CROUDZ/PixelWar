@@ -42,7 +42,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
 
     // Mettre à jour le cooldown toutes les secondes
     const interval = setInterval(() => {
-      setRemainingTime(prev => {
+      setRemainingTime((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
           return 0;
@@ -98,7 +98,8 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
       </div>
       {remainingTime > 0 && (
         <p className="text-sm text-red-500 mb-2">
-          Vous devez attendre {remainingTime} seconde{remainingTime > 1 ? "s" : ""} avant de placer un pixel.
+          Vous devez attendre {remainingTime} seconde
+          {remainingTime > 1 ? "s" : ""} avant de placer un pixel.
         </p>
       )}
       <div className="mt-4 flex space-x-2">

@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 
 const nesPalette = [
   "#000000",
@@ -24,7 +24,10 @@ interface PixelSelectorProps {
   valide?: boolean;
 }
 
-const PixelSelector: React.FC<PixelSelectorProps> = ({ onSelect, valide=false }) => {
+const PixelSelector: React.FC<PixelSelectorProps> = ({
+  onSelect,
+  valide = false,
+}) => {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   const handleColorSelect = (color: string) => {
@@ -33,8 +36,9 @@ const PixelSelector: React.FC<PixelSelectorProps> = ({ onSelect, valide=false })
   };
   return (
     <div
-    className={`bg-white/90 p-2 rounded shadow-lg flex flex-wrap gap-2 max-w-xs 
-    sm:max-w-sm md:max-w-none justify-center items-center ${valide ? "flex-row" : "sm:flex-col"}`}>
+      className={`bg-white/90 p-2 rounded shadow-lg flex flex-wrap gap-2 max-w-xs 
+    sm:max-w-sm md:max-w-none justify-center items-center ${valide ? "flex-row" : "sm:flex-col"}`}
+    >
       {nesPalette.map((color) => (
         <button
           key={color}

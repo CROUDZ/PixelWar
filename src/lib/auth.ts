@@ -7,7 +7,7 @@ import type {
 } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import  {Prisma, PrismaClient} from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 // @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
 import prismaJs from "./prisma.mjs";
 import { synchronize } from "@/lib/synchronize"; // nouvelle signature acceptant prismaUserId optionnel
@@ -82,7 +82,6 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           session.user.lastPixelPlaced = dbUser.lastPixelPlaced ?? null;
         }
-
       }
       return session;
     },
