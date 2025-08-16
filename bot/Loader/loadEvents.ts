@@ -10,14 +10,14 @@ const __dirname = path.dirname(__filename);
 interface EventFile {
   default: {
     name: string;
-    execute: (client: Client, ...args: any[]) => Promise<void> | void;
+    execute: (client: Client, ...args: unknown[]) => Promise<void> | void;
   };
 }
 
 /**
  * Charge tous les événements depuis le dossier src/events ou dist/events
  */
-export default async (client: Client): Promise<void> => {
+const loadEvents = async (client: Client): Promise<void> => {
   const eventsDir = path.join(__dirname, '../events');
   const subdirs = fs.readdirSync(eventsDir);
 
@@ -45,7 +45,7 @@ export default async (client: Client): Promise<void> => {
           continue;
         }
 
-        client.on(event.name, (...args) => event.execute(client, ...args));
+        client.on(event.name, (...args: unknown[]) => event.execute(client, ...args));
         console.log(`✅ Événement chargé: ${event.name}`);
       } catch (error) {
         console.error(`❌ Impossible de charger l'événement ${file}:`, error);
@@ -55,3 +55,5 @@ export default async (client: Client): Promise<void> => {
 
   console.log('🎉 Tous les événements ont été chargés !');
 };
+
+export default loadEvents;

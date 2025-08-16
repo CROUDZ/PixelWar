@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const commandsPath = path.join(__dirname, '../commands');
 
 // Modifier la structure pour stocker à la fois la commande et son chemin
-const commands: { data: any; path: string }[] = [];
+const commands: { data: unknown; path: string }[] = [];
 
 const loadCommands = async () => {
   const items = fs.readdirSync(commandsPath);
@@ -53,17 +53,18 @@ const main = async () => {
 
   try {
     // Supprimer toutes les anciennes commandes globales
-    const currentCommands: any = await rest.get(
+    const currentCommands: unknown = await rest.get(
       Routes.applicationCommands(clientId)
     );
-    for (const cmd of currentCommands) {
-      console.log(`[INFO] Suppression de la commande existante : ${cmd.name}`);
-      await rest.delete(Routes.applicationCommand(clientId, cmd.id));
+    for (const cmd of currentCommands as Array<unknown>) {
+      const command = cmd as { name: string; id: string };
+      console.log(`[INFO] Suppression de la commande existante : ${command.name}`);
+      await rest.delete(Routes.applicationCommand(clientId, command.id));
     }
 
     // Affichage des nouvelles commandes avec leurs chemins
     commands.forEach((cmdInfo) => {
-      const cmd = cmdInfo.data;
+      const cmd = cmdInfo.data as { name?: string; description?: string };
       if (!cmd.name || !cmd.description) {
         console.error(
           `[ERROR] La commande ${cmd.name || 'inconnue'} est manquante ou invalide. Chemin: ${cmdInfo.path}`

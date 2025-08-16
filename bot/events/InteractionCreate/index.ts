@@ -7,12 +7,12 @@ import {
   ButtonInteraction,
 } from 'discord.js';
 
-export default {
+const interactionCreateEvent = {
   name: Events.InteractionCreate,
   async execute(client: Client, interaction: Interaction) {
     // Gestion des commandes slash
     if (interaction.isChatInputCommand()) {
-      const command = interaction.client.commands.get(interaction.commandName);
+      const command = client.commands.get(interaction.commandName);
       if (!command) {
         console.error(
           `No command matching ${interaction.commandName} was found.`
@@ -20,9 +20,11 @@ export default {
         return;
       }
       try {
+        // Exemple d'utilisation des options avec assertion de type :
+        const options = (command as { options?: unknown }).options;
         await command.execute(
           interaction as CommandInteraction,
-          command.options
+          options
         );
       } catch (error) {
         console.error(error);
@@ -67,3 +69,5 @@ export default {
     // Vous pouvez gérer ici d'autres types d'interactions (menus, modals, etc.)
   },
 };
+
+export default interactionCreateEvent;

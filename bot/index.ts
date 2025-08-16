@@ -9,8 +9,6 @@ import express from 'express';
 import type { Application as ExpressApplication } from 'express-serve-static-core'; // Renamed to avoid confusion
 import loadMiddlewares from './middlewares.js';
 
-import apiRoutes from './routes/api.js';
-
 import 'dotenv/config';
 
 // Extend Client interface to add custom properties
@@ -24,8 +22,6 @@ declare module 'discord.js' {
 
 const app: ExpressApplication = express(); // Correct typing for Express app
 loadMiddlewares(app);
-
-app.use('/api/', apiRoutes);
 
 const client: DiscordClient = new DiscordClient({ intents: 53608447 });
 client.commands = new Collection();
@@ -43,6 +39,13 @@ app.locals.discordClient = client;
 app.listen(3001, '127.0.0.1', () => {
   console.log(`Server is running on port 3001`);
 });
+
+console.log('DISCORD_CLIENT_TOKEN:', process.env.DISCORD_CLIENT_TOKEN);
+
+if (!process.env.DISCORD_CLIENT_TOKEN) {
+  console.error('Error: DISCORD_CLIENT_TOKEN is not set in environment variables.');
+  process.exit(1);
+}
 
 client.login(process.env.DISCORD_CLIENT_TOKEN);
 

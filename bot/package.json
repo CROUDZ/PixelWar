@@ -1,9 +1,3 @@
 {
-  "type": "module",
-  "scripts": {
-    "build": "rimraf dist/bot && tsc -p bot/tsconfig.bot.json && tsc-alias -p bot/tsconfig.bot.json && mkdir -p dist/bot && cp -r config.json bot/modules dist/bot/ && npm run minify",
-    "minify": "find dist/bot -type f -name '*.js' -exec terser --compress --mangle --module -o {} {} \\;",
-    "dev": "npm run build && NODE_TLS_REJECT_UNAUTHORIZED=0 node dist/bot/index.js",
-    "start": "NODE_ENV=production node dist/bot/index.js"
-  }
+  "type": "module"
 }

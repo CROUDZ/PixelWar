@@ -13,11 +13,13 @@ interface Command {
   default: {
     data: {
       name: string;
+      description: string;
     };
-    execute: Function;
+    execute: (...args: unknown[]) => void;
   };
 }
-export default async (client: Client): Promise<void> => {
+
+const loadCommands = async (client: Client): Promise<void> => {
   console.log(`[INFO] Chargement des commandes...`);
   const items = fs.readdirSync(commandsPath);
   console.log(`[INFO] Chargement des commandes depuis ${commandsPath}`);
@@ -36,7 +38,10 @@ export default async (client: Client): Promise<void> => {
         const filePath = path.join(itemPath, file);
         const promise = import(pathToFileURL(filePath).toString())
           .then((command: Command) => {
-            if (command.default?.data && command.default?.execute) {
+            if (
+              command.default?.data &&
+              typeof command.default?.execute === 'function'
+            ) {
               client.commands.set(command.default.data.name, command.default);
             } else {
               console.error(
@@ -52,7 +57,10 @@ export default async (client: Client): Promise<void> => {
     } else if (item.endsWith('.ts') || item.endsWith('.js')) {
       const promise = import(pathToFileURL(itemPath).toString())
         .then((command: Command) => {
-          if (command.default?.data && command.default?.execute) {
+          if (
+            command.default?.data &&
+            typeof command.default?.execute === 'function'
+          ) {
             client.commands.set(command.default.data.name, command.default);
           } else {
             console.error(
@@ -71,3 +79,5 @@ export default async (client: Client): Promise<void> => {
 
   console.log(`[INFO] ${client.commands.size} commandes chargées.`);
 };
+
+export default loadCommands;
