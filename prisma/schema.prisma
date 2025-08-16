@@ -49,6 +49,7 @@ model User {
   refreshToken    String?
   expires         Int?
   joinGuild       Boolean       @default(false)
+  boosted         Boolean       @default(false)
   role            Role          @default(USER)
   lastPixelPlaced DateTime?
   accounts        Account[]

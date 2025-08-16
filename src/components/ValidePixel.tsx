@@ -11,7 +11,9 @@ interface ValidePixelProps {
   onCancel: () => void;
 }
 
-const COOLDOWN_SECONDS = 60;
+// Cooldown par défaut
+const DEFAULT_COOLDOWN_SECONDS = 60;
+const BOOSTED_COOLDOWN_SECONDS = 45;
 
 const ValidePixel: React.FC<ValidePixelProps> = ({
   initialX,
@@ -34,9 +36,11 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
       return;
     }
 
+    // Détermine le cooldown selon le boost
+    const cooldownSeconds = session?.user?.boosted ? BOOSTED_COOLDOWN_SECONDS : DEFAULT_COOLDOWN_SECONDS;
     const lastPlaced = new Date(session.user.lastPixelPlaced).getTime();
     const now = Date.now();
-    const diff = Math.max(0, COOLDOWN_SECONDS * 1000 - (now - lastPlaced));
+    const diff = Math.max(0, cooldownSeconds * 1000 - (now - lastPlaced));
 
     setRemainingTime(Math.ceil(diff / 1000));
 

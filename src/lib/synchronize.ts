@@ -1,6 +1,12 @@
-import prisma from "@/lib/prisma";
+// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
+import prismaJs from "./prisma.mjs";
 import type { Guild } from "@/types/discord";
 import type { DiscordProfile } from "@/types/discord";
+
+// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
+const prisma = prismaJs;
+
+const guildId = process.env.DISCORD_GUILD_ID || "1278013961987690599"; // ID du serveur Discord
 
 async function refreshDiscordToken(refreshToken: string) {
   const body = new URLSearchParams({
@@ -82,8 +88,24 @@ export async function synchronize(data: {
   }
 
   const guilds = await guildsResponse.json();
-  const targetGuildId = "1278013961987690599";
-  const isInGuild = guilds.some((g: Guild) => g.id === targetGuildId);
+  const isInGuild = guilds.some((g: Guild) => g.id === guildId);
+
+  const guildMemberResponse = await fetch(
+  `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
+  {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }
+);
+
+let boosted = false;
+
+if (guildMemberResponse.ok) {
+  const memberData = await guildMemberResponse.json();
+  boosted = !!memberData.premium_since; // true si boost, false sinon
+} else {
+  // si on ne peut pas récupérer le membre (pas dans la guilde ou pas les droits)
+  boosted = false;
+}
 
   // Si prismaUserId existe, mettre à jour l'utilisateur existant (c'est la bonne pratique)
   if (data.prismaUserId) {
@@ -101,6 +123,7 @@ export async function synchronize(data: {
         refreshToken: newRefreshToken,
         expires: undefined, // si tu veux stocker expires, mappe account.expires_at
         joinGuild: isInGuild,
+        boosted
       },
     });
     return;
@@ -119,6 +142,7 @@ export async function synchronize(data: {
         accessToken,
         refreshToken: newRefreshToken,
         joinGuild: isInGuild,
+        boosted
       },
       create: {
         id: discordId, // si tu veux absolument garder l'id discord, ok (optionnel)
@@ -131,6 +155,7 @@ export async function synchronize(data: {
         accessToken,
         refreshToken: newRefreshToken,
         joinGuild: isInGuild,
+        boosted
       },
     });
     return;
@@ -148,6 +173,7 @@ export async function synchronize(data: {
       accessToken,
       refreshToken: newRefreshToken,
       joinGuild: isInGuild,
+      boosted
     },
     create: {
       id: discordId,
@@ -159,6 +185,7 @@ export async function synchronize(data: {
       accessToken,
       refreshToken: newRefreshToken,
       joinGuild: isInGuild,
+      boosted
     },
   });
 }
