@@ -1,13 +1,13 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { Client } from 'discord.js'; // Assurez-vous d'importer le type Client de discord.js
+import fs from "fs";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+import { Client } from "discord.js"; // Assurez-vous d'importer le type Client de discord.js
 
 // Reconstruction de __dirname pour les modules ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const commandsPath = path.join(__dirname, '../commands');
+const commandsPath = path.join(__dirname, "../commands");
 
 interface Command {
   default: {
@@ -32,7 +32,7 @@ const loadCommands = async (client: Client): Promise<void> => {
     if (fs.lstatSync(itemPath).isDirectory()) {
       const commandFiles = fs
         .readdirSync(itemPath)
-        .filter((file) => file.endsWith('.ts') || file.endsWith('.js'));
+        .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
 
       for (const file of commandFiles) {
         const filePath = path.join(itemPath, file);
@@ -40,36 +40,36 @@ const loadCommands = async (client: Client): Promise<void> => {
           .then((command: Command) => {
             if (
               command.default?.data &&
-              typeof command.default?.execute === 'function'
+              typeof command.default?.execute === "function"
             ) {
               client.commands.set(command.default.data.name, command.default);
             } else {
               console.error(
-                `[WARNING] Commande dans ${filePath} manque "data" ou "execute"`
+                `[WARNING] Commande dans ${filePath} manque "data" ou "execute"`,
               );
             }
           })
           .catch((err) =>
-            console.error(`[ERROR] Impossible d'importer ${filePath}:`, err)
+            console.error(`[ERROR] Impossible d'importer ${filePath}:`, err),
           );
         promises.push(promise);
       }
-    } else if (item.endsWith('.ts') || item.endsWith('.js')) {
+    } else if (item.endsWith(".ts") || item.endsWith(".js")) {
       const promise = import(pathToFileURL(itemPath).toString())
         .then((command: Command) => {
           if (
             command.default?.data &&
-            typeof command.default?.execute === 'function'
+            typeof command.default?.execute === "function"
           ) {
             client.commands.set(command.default.data.name, command.default);
           } else {
             console.error(
-              `[WARNING] Commande dans ${itemPath} manque "data" ou "execute"`
+              `[WARNING] Commande dans ${itemPath} manque "data" ou "execute"`,
             );
           }
         })
         .catch((err) =>
-          console.error(`[ERROR] Impossible d'importer ${itemPath}:`, err)
+          console.error(`[ERROR] Impossible d'importer ${itemPath}:`, err),
         );
       promises.push(promise);
     }

@@ -37,7 +37,9 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
     }
 
     // Détermine le cooldown selon le boost
-    const cooldownSeconds = session?.user?.boosted ? BOOSTED_COOLDOWN_SECONDS : DEFAULT_COOLDOWN_SECONDS;
+    const cooldownSeconds = session?.user?.boosted
+      ? BOOSTED_COOLDOWN_SECONDS
+      : DEFAULT_COOLDOWN_SECONDS;
     const lastPlaced = new Date(session.user.lastPixelPlaced).getTime();
     const now = Date.now();
     const diff = Math.max(0, cooldownSeconds * 1000 - (now - lastPlaced));

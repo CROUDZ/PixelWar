@@ -1,28 +1,32 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+// src/pages/api/guildMemberRemove.ts
+import prisma from "@/lib/prisma";
+import type { NextApiRequest, NextApiResponse } from "next";
+import Redis from "ioredis";
 
-const prisma = new PrismaClient();
+const pub = new Redis();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-console.log('Received request to /api/guildMemberRemove');
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'Missing userId parameter' });
-  }
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { joinGuild: false },
-    });
+    console.log("[guildMemberRemove] deleting sessions for", userId);
+    await prisma.session.deleteMany({ where: { userId } });
 
-    return res.status(200).json({ success: true, user });
+    console.log("[guildMemberRemove] update user joinGuild=false for", userId);
+    await prisma.user.update({ where: { id: userId }, data: { joinGuild: false } });
+
+    console.log("[guildMemberRemove] publishing redis logout for", userId);
+    const published = await pub.publish("logout", JSON.stringify({ userId }));
+    console.log("[guildMemberRemove] redis publish returned:", published);
+
+    return res.status(200).json({ success: true, published });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to update user', details: error });
+    console.error("[guildMemberRemove] error:", error);
+    return res.status(500).json({ error: "Failed to remove user" });
   }
 }

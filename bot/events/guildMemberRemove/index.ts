@@ -1,4 +1,4 @@
-import { Events, Client, GuildMember } from 'discord.js';
+import { Events, Client, GuildMember } from "discord.js";
 
 const guildMemberRemoveEvent = {
   name: Events.GuildMemberRemove,
@@ -7,13 +7,13 @@ const guildMemberRemoveEvent = {
 
     // Appel à l'API pour mettre à jour joinGuild
     try {
-      await fetch('http://localhost:3000/api/guildMemberRemove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("http://localhost:3000/api/guildMemberRemove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: member.id }),
       });
     } catch (error) {
-      console.error('Failed to notify API about guild member removal:', error);
+      console.error("Failed to notify API about guild member removal:", error);
     }
   },
 };

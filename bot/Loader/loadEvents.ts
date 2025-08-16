@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { Client } from 'discord.js';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+import { Client } from "discord.js";
 
 // Reconstruction de __dirname pour ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -18,7 +18,7 @@ interface EventFile {
  * Charge tous les événements depuis le dossier src/events ou dist/events
  */
 const loadEvents = async (client: Client): Promise<void> => {
-  const eventsDir = path.join(__dirname, '../events');
+  const eventsDir = path.join(__dirname, "../events");
   const subdirs = fs.readdirSync(eventsDir);
 
   for (const subdir of subdirs) {
@@ -28,7 +28,7 @@ const loadEvents = async (client: Client): Promise<void> => {
     const files = fs
       .readdirSync(subdirPath)
       // Charge les fichiers .js et .ts (selon environnement)
-      .filter((file) => file === 'index.ts' || file === 'index.js');
+      .filter((file) => file === "index.ts" || file === "index.js");
 
     for (const file of files) {
       const fullPath = path.join(subdirPath, file);
@@ -40,12 +40,14 @@ const loadEvents = async (client: Client): Promise<void> => {
 
         if (!event.name || !event.execute) {
           console.error(
-            `[ERREUR] Le fichier d'événement ${file} ne définit pas 'name' ou 'execute'`
+            `[ERREUR] Le fichier d'événement ${file} ne définit pas 'name' ou 'execute'`,
           );
           continue;
         }
 
-        client.on(event.name, (...args: unknown[]) => event.execute(client, ...args));
+        client.on(event.name, (...args: unknown[]) =>
+          event.execute(client, ...args),
+        );
         console.log(`✅ Événement chargé: ${event.name}`);
       } catch (error) {
         console.error(`❌ Impossible de charger l'événement ${file}:`, error);
@@ -53,7 +55,7 @@ const loadEvents = async (client: Client): Promise<void> => {
     }
   }
 
-  console.log('🎉 Tous les événements ont été chargés !');
+  console.log("🎉 Tous les événements ont été chargés !");
 };
 
 export default loadEvents;

@@ -8,15 +8,11 @@ import type {
 import DiscordProvider from "next-auth/providers/discord";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { Prisma } from "@prisma/client";
-// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
-import prismaJs from "./prisma.mjs";
+import prisma from "@/lib/prisma";
 import { synchronize } from "@/lib/synchronize"; // nouvelle signature acceptant prismaUserId optionnel
 import type { JWT } from "next-auth/jwt";
 import type { DiscordProfile } from "@/types/discord"; // Assurez-vous que ce type est défini dans votre projet
 import addUserToGuild from "@/lib/addUserToGuild"; // Import de la fonction pour ajouter l'utilisateur au serveur
-
-// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
-const prisma = prismaJs;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

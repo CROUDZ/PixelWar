@@ -1,10 +1,6 @@
-// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
-import prismaJs from "./prisma.mjs";
+import prisma from "@/lib/prisma";
 import type { Guild } from "@/types/discord";
 import type { DiscordProfile } from "@/types/discord";
-
-// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
-const prisma = prismaJs;
 
 const guildId = process.env.DISCORD_GUILD_ID || "1278013961987690599"; // ID du serveur Discord
 
@@ -91,21 +87,21 @@ export async function synchronize(data: {
   const isInGuild = guilds.some((g: Guild) => g.id === guildId);
 
   const guildMemberResponse = await fetch(
-  `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
-  {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+
+  let boosted = false;
+
+  if (guildMemberResponse.ok) {
+    const memberData = await guildMemberResponse.json();
+    boosted = !!memberData.premium_since; // true si boost, false sinon
+  } else {
+    // si on ne peut pas récupérer le membre (pas dans la guilde ou pas les droits)
+    boosted = false;
   }
-);
-
-let boosted = false;
-
-if (guildMemberResponse.ok) {
-  const memberData = await guildMemberResponse.json();
-  boosted = !!memberData.premium_since; // true si boost, false sinon
-} else {
-  // si on ne peut pas récupérer le membre (pas dans la guilde ou pas les droits)
-  boosted = false;
-}
 
   // Si prismaUserId existe, mettre à jour l'utilisateur existant (c'est la bonne pratique)
   if (data.prismaUserId) {
@@ -123,7 +119,7 @@ if (guildMemberResponse.ok) {
         refreshToken: newRefreshToken,
         expires: undefined, // si tu veux stocker expires, mappe account.expires_at
         joinGuild: isInGuild,
-        boosted
+        boosted,
       },
     });
     return;
@@ -142,7 +138,7 @@ if (guildMemberResponse.ok) {
         accessToken,
         refreshToken: newRefreshToken,
         joinGuild: isInGuild,
-        boosted
+        boosted,
       },
       create: {
         id: discordId, // si tu veux absolument garder l'id discord, ok (optionnel)
@@ -155,7 +151,7 @@ if (guildMemberResponse.ok) {
         accessToken,
         refreshToken: newRefreshToken,
         joinGuild: isInGuild,
-        boosted
+        boosted,
       },
     });
     return;
@@ -173,7 +169,7 @@ if (guildMemberResponse.ok) {
       accessToken,
       refreshToken: newRefreshToken,
       joinGuild: isInGuild,
-      boosted
+      boosted,
     },
     create: {
       id: discordId,
@@ -185,7 +181,7 @@ if (guildMemberResponse.ok) {
       accessToken,
       refreshToken: newRefreshToken,
       joinGuild: isInGuild,
-      boosted
+      boosted,
     },
   });
 }

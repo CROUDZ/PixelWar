@@ -1,12 +1,12 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { Client } from 'discord.js';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+import { Client } from "discord.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const buttonsPath = path.join(__dirname, '../buttons');
+const buttonsPath = path.join(__dirname, "../buttons");
 
 // Explicitly type the execute function and add the required data property
 interface Button {
@@ -30,34 +30,34 @@ const loadButtons = (client: Client): void => {
     if (fs.lstatSync(itemPath).isDirectory()) {
       const buttonFiles = fs
         .readdirSync(itemPath)
-        .filter((file) => file.endsWith('.ts') || file.endsWith('.js'));
+        .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
       for (const file of buttonFiles) {
         const filePath = path.join(itemPath, file);
         import(pathToFileURL(filePath).toString()).then((button: Button) => {
           if (
             button.default?.id &&
-            typeof button.default?.execute === 'function' &&
+            typeof button.default?.execute === "function" &&
             button.default?.data
           ) {
             client.buttons.set(button.default.id, button.default);
           } else {
             console.error(
-              `[WARNING] Button in ${filePath} is missing required "id", "execute", or "data" properties`
+              `[WARNING] Button in ${filePath} is missing required "id", "execute", or "data" properties`,
             );
           }
         });
       }
-    } else if (item.endsWith('.ts') || item.endsWith('.js')) {
+    } else if (item.endsWith(".ts") || item.endsWith(".js")) {
       import(pathToFileURL(itemPath).toString()).then((button: Button) => {
         if (
           button.default?.id &&
-          typeof button.default?.execute === 'function' &&
+          typeof button.default?.execute === "function" &&
           button.default?.data
         ) {
           client.buttons.set(button.default.id, button.default);
         } else {
           console.error(
-            `[WARNING] Button in ${itemPath} is missing required "id", "execute", or "data" properties`
+            `[WARNING] Button in ${itemPath} is missing required "id", "execute", or "data" properties`,
           );
         }
       });

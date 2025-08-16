@@ -5,7 +5,7 @@ import {
   Client,
   CommandInteraction,
   ButtonInteraction,
-} from 'discord.js';
+} from "discord.js";
 
 const interactionCreateEvent = {
   name: Events.InteractionCreate,
@@ -15,27 +15,24 @@ const interactionCreateEvent = {
       const command = client.commands.get(interaction.commandName);
       if (!command) {
         console.error(
-          `No command matching ${interaction.commandName} was found.`
+          `No command matching ${interaction.commandName} was found.`,
         );
         return;
       }
       try {
         // Exemple d'utilisation des options avec assertion de type :
         const options = (command as { options?: unknown }).options;
-        await command.execute(
-          interaction as CommandInteraction,
-          options
-        );
+        await command.execute(interaction as CommandInteraction, options);
       } catch (error) {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp({
-            content: 'There was an error while executing this command!',
+            content: "There was an error while executing this command!",
             flags: MessageFlags.Ephemeral,
           });
         } else {
           await interaction.reply({
-            content: 'There was an error while executing this command!',
+            content: "There was an error while executing this command!",
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -55,12 +52,12 @@ const interactionCreateEvent = {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp({
-            content: 'There was an error while executing this button!',
+            content: "There was an error while executing this button!",
             flags: MessageFlags.Ephemeral,
           });
         } else {
           await interaction.reply({
-            content: 'There was an error while executing this button!',
+            content: "There was an error while executing this button!",
             flags: MessageFlags.Ephemeral,
           });
         }

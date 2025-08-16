@@ -3,9 +3,57 @@
 import { config } from "dotenv";
 import { WebSocketServer } from "ws";
 import redis from "redis";
-import prisma from "../src/lib/prisma.mjs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { PrismaClient } from "@prisma/client";
+import { Redis } from "ioredis";
+const sub = new Redis();
+
+// near top, après const sub = new Redis();
+sub.subscribe("logout", (err, count) => {
+  if (err) console.error("Redis subscribe error:", err);
+  else console.log("Subscribed to logout channel, subscriber count:", count);
+});
+
+sub.on("message", (channel, message) => {
+  console.log("[server.js] Redis message:", channel, message);
+  if (channel === "logout") {
+    try {
+      const { userId } = JSON.parse(message);
+      console.log("[server.js] logout event for userId:", userId);
+
+      const set = userSockets.get(String(userId));
+      if (set && set.size > 0) {
+        console.log(`[server.js] sending logout to ${set.size} socket(s) for user ${userId}`);
+        for (const s of Array.from(set)) {
+          try {
+            if (s.readyState === s.OPEN || s.readyState === 1) {
+              s.send(JSON.stringify({ type: "logout" }));
+            } else {
+              console.log("[server.js] socket not open, removing");
+              set.delete(s);
+            }
+          } catch (e) {
+            console.error("[server.js] failed to send logout to socket:", e);
+          }
+        }
+        // cleanup if set became empty
+        if (set.size === 0) userSockets.delete(String(userId));
+      } else {
+        console.log("[server.js] no ws found for user", userId);
+      }
+    } catch (e) {
+      console.error("Invalid logout payload:", e);
+    }
+  }
+});
+
+
+
+
+
+// Initialize Prisma Client
+const prisma = new PrismaClient();
 
 // Get the directory of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +75,33 @@ const BATCH_MAX = Number(process.env.BATCH_MAX || 1000); // items per DB write
 const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000); // debounce Redis grid SAVE
 
 let totalPixels = 0;
+const userSockets = new Map(); // Map<userId, Set<ws>>
+
+// helper pour ajouter un ws à un userId
+function addUserSocket(userId, ws) {
+  let set = userSockets.get(userId);
+  if (!set) {
+    set = new Set();
+    userSockets.set(userId, set);
+  }
+  set.add(ws);
+  ws.userId = userId;
+  console.log(`[server.js] addUserSocket: ${userId} -> now ${set.size} socket(s)`);
+}
+
+// helper pour retirer un ws (à la close)
+function removeUserSocket(ws) {
+  const userId = ws.userId;
+  if (!userId) return;
+  const set = userSockets.get(userId);
+  if (!set) return;
+  set.delete(ws);
+  console.log(`[server.js] removeUserSocket: ${userId} -> remaining ${set.size} socket(s)`);
+  if (set.size === 0) {
+    userSockets.delete(userId);
+    console.log(`[server.js] removed user mapping for ${userId}`);
+  }
+}
 
 async function initCounter() {
   console.log("Initializing pixel counter...");
@@ -311,6 +386,12 @@ initCounter();
         return;
       }
 
+      if (data.type === "auth" && data.userId) {
+        addUserSocket(data.userId, ws);
+        console.log(`User registered on WS: ${data.userId}`);
+        return;
+      }
+
       if (data.type === "placePixel") {
         const place = validatePlacePixel(data);
         if (!place) return;
@@ -360,6 +441,7 @@ initCounter();
     });
 
     ws.on("close", () => {
+      removeUserSocket(ws);
       console.log("Client disconnected:", ws._id);
     });
 

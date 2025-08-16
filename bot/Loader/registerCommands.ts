@@ -1,14 +1,14 @@
-import { REST, Routes } from 'discord.js';
-import { config } from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { REST, Routes } from "discord.js";
+import { config } from "dotenv";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 
 config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const commandsPath = path.join(__dirname, '../commands');
+const commandsPath = path.join(__dirname, "../commands");
 
 // Modifier la structure pour stocker à la fois la commande et son chemin
 const commands: { data: unknown; path: string }[] = [];
@@ -22,7 +22,7 @@ const loadCommands = async () => {
     if (fs.lstatSync(itemPath).isDirectory()) {
       const files = fs
         .readdirSync(itemPath)
-        .filter((f) => f.endsWith('.js') || f.endsWith('.ts'));
+        .filter((f) => f.endsWith(".js") || f.endsWith(".ts"));
       for (const file of files) {
         const filePath = path.join(itemPath, file);
         const command = await import(pathToFileURL(filePath).toString());
@@ -33,7 +33,7 @@ const loadCommands = async () => {
           });
         }
       }
-    } else if (item.endsWith('.js') || item.endsWith('.ts')) {
+    } else if (item.endsWith(".js") || item.endsWith(".ts")) {
       const command = await import(pathToFileURL(itemPath).toString());
       if (command.default?.data) {
         commands.push({
@@ -54,11 +54,13 @@ const main = async () => {
   try {
     // Supprimer toutes les anciennes commandes globales
     const currentCommands: unknown = await rest.get(
-      Routes.applicationCommands(clientId)
+      Routes.applicationCommands(clientId),
     );
     for (const cmd of currentCommands as Array<unknown>) {
       const command = cmd as { name: string; id: string };
-      console.log(`[INFO] Suppression de la commande existante : ${command.name}`);
+      console.log(
+        `[INFO] Suppression de la commande existante : ${command.name}`,
+      );
       await rest.delete(Routes.applicationCommand(clientId, command.id));
     }
 
@@ -67,11 +69,11 @@ const main = async () => {
       const cmd = cmdInfo.data as { name?: string; description?: string };
       if (!cmd.name || !cmd.description) {
         console.error(
-          `[ERROR] La commande ${cmd.name || 'inconnue'} est manquante ou invalide. Chemin: ${cmdInfo.path}`
+          `[ERROR] La commande ${cmd.name || "inconnue"} est manquante ou invalide. Chemin: ${cmdInfo.path}`,
         );
       } else {
         console.log(
-          `[INFO] Commande ${cmd.name} prête à être enregistrée. Chemin: ${cmdInfo.path}`
+          `[INFO] Commande ${cmd.name} prête à être enregistrée. Chemin: ${cmdInfo.path}`,
         );
       }
     });
@@ -79,12 +81,12 @@ const main = async () => {
     // Enregistrement - extraire seulement les données de commande pour l'API
     const commandData = commands.map((cmd) => cmd.data);
     console.log(
-      `[INFO] Enregistrement de ${commandData.length} commande(s) sur Discord...`
+      `[INFO] Enregistrement de ${commandData.length} commande(s) sur Discord...`,
     );
     await rest.put(Routes.applicationCommands(clientId), { body: commandData });
-    console.log('[✅] Commandes enregistrées avec succès.');
+    console.log("[✅] Commandes enregistrées avec succès.");
   } catch (err) {
-    console.error('Erreur lors de la mise à jour des commandes :', err);
+    console.error("Erreur lors de la mise à jour des commandes :", err);
   }
 };
 
