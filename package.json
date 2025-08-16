@@ -19,6 +19,8 @@
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "critters": "^0.0.23",
+    "discord.js": "^14.21.0",
+    "express-serve-static-core": "^0.1.1",
     "framer-motion": "^12.20.2",
     "ioredis": "^5.7.0",
     "lucide-react": "^0.539.0",

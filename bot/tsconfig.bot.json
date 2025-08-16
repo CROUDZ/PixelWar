@@ -1,0 +1,34 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "outDir": "../dist",
+    "rootDir": "../",
+    "noEmit": false,
+    "module": "NodeNext",
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "esModuleInterop": true, // ← active l’import “default” pour les modules CommonJS
+    "allowSyntheticDefaultImports": true, // ← idem, autorise les default imports
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "baseUrl": "../", // ← ajoutez
+    "paths": {
+      // ← ajoutez
+      "@/*": ["src/*"],
+      "#config": ["./config.json"],
+      "module-alias/register": ["node_modules/module-alias/register.js"]
+    },
+    "types": ["node", "next-auth"], // plus de next‑auth ici
+    "skipLibCheck": true,
+    "allowJs": true
+  },
+  "include": [
+    "./**/*",
+    "../src/types/**/*",
+    "../types/**/*.d.ts",
+  ],
+  "exclude": ["../node_modules", "../dist"]
+}
