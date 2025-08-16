@@ -8,12 +8,12 @@ const PixelInformations: React.FC = () => {
   useEffect(() => {
     // S'assurer que la connexion est créée
     const ws = getWS();
-    
+
     // Vérifier périodiquement l'état de la connexion
     const checkConnection = () => {
       setIsConnected(isWSConnected() ?? false);
     };
-    
+
     const connectionInterval = setInterval(checkConnection, 1000);
     checkConnection(); // Vérification initiale
 
@@ -21,17 +21,23 @@ const PixelInformations: React.FC = () => {
     console.log(ws);
     const unsubscribe = subscribeWS((data) => {
       console.log("WebSocket message received in PixelInformations:", data);
-      
+
       if (typeof data === "object" && data !== null) {
         // Gérer différents types de messages
-        if (data.type === "pixelCount" && typeof data.totalPixels === "number") {
+        if (
+          data.type === "pixelCount" &&
+          typeof data.totalPixels === "number"
+        ) {
           setCount(data.totalPixels);
-        } else if (data.type === "init" && typeof data.totalPixels === "number") {
+        } else if (
+          data.type === "init" &&
+          typeof data.totalPixels === "number"
+        ) {
           // Au cas où le serveur envoie le count dans le message init
           setCount(data.totalPixels);
         } else if (data.type === "updatePixel") {
           // Incrémenter le compteur quand un nouveau pixel est placé
-          setCount(prev => prev + 1);
+          setCount((prev) => prev + 1);
         }
       }
     });
@@ -47,7 +53,8 @@ const PixelInformations: React.FC = () => {
       <h3>Total Pixels Placed:</h3>
       <p>{count}</p>
       <div className="text-xs mt-2">
-        Status: <span className={isConnected ? "text-green-400" : "text-red-400"}>
+        Status:{" "}
+        <span className={isConnected ? "text-green-400" : "text-red-400"}>
           {isConnected ? "Connected" : "Disconnected"}
         </span>
       </div>

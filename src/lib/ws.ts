@@ -4,20 +4,28 @@ let isConnecting = false;
 let reconnectTimeout: NodeJS.Timeout | null = null;
 
 export function getWS() {
-  console.log("getWS called, current ws state:", ws?.readyState, "isConnecting:", isConnecting);
-  
+  console.log(
+    "getWS called, current ws state:",
+    ws?.readyState,
+    "isConnecting:",
+    isConnecting,
+  );
+
   if (!ws || ws.readyState === WebSocket.CLOSED) {
     if (isConnecting) {
       console.log("Connection already in progress, returning existing ws");
       return ws;
     }
-    
+
     console.log("Creating new WebSocket connection...");
     isConnecting = true;
     ws = new WebSocket("ws://localhost:8080");
 
     ws.onopen = () => {
-      console.log("Connected to WebSocket server - listeners count:", listeners.length);
+      console.log(
+        "Connected to WebSocket server - listeners count:",
+        listeners.length,
+      );
       isConnecting = false;
     };
 
@@ -25,8 +33,14 @@ export function getWS() {
       console.log("Raw WebSocket message:", event.data);
       try {
         const data = JSON.parse(event.data);
-        console.log("Parsed WebSocket data:", data, "will notify", listeners.length, "listeners");
-        
+        console.log(
+          "Parsed WebSocket data:",
+          data,
+          "will notify",
+          listeners.length,
+          "listeners",
+        );
+
         // Notifier tous les listeners
         listeners.forEach((fn, index) => {
           try {
@@ -42,13 +56,16 @@ export function getWS() {
     };
 
     ws.onclose = (event) => {
-      console.log("WebSocket disconnected, retry in 3s...", event.reason || event.code);
+      console.log(
+        "WebSocket disconnected, retry in 3s...",
+        event.reason || event.code,
+      );
       isConnecting = false;
-      
+
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
-      
+
       reconnectTimeout = setTimeout(() => {
         console.log("Attempting to reconnect...");
         ws = null;
@@ -70,14 +87,17 @@ export function getWS() {
 }
 
 export function subscribeWS(callback: (data: Record<string, unknown>) => void) {
-  console.log("subscribeWS called, adding listener. Total listeners before:", listeners.length);
+  console.log(
+    "subscribeWS called, adding listener. Total listeners before:",
+    listeners.length,
+  );
   listeners.push(callback);
   console.log("Total listeners after:", listeners.length);
-  
+
   // S'assurer qu'une connexion WebSocket existe
   const socket = getWS();
   console.log("WebSocket state after getWS():", socket?.readyState);
-  
+
   // Fonction de désabonnement
   return () => {
     console.log("Unsubscribing listener. Listeners before:", listeners.length);
