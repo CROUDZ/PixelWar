@@ -59,12 +59,12 @@ model User {
 }
 
 model PixelAction {
-  id         String   @id @default(cuid())
-  x          Int
-  y          Int
-  colorIndex Int
-  userId     String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  x         Int
+  y         Int
+  color     String
+  userId    String?
+  createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 

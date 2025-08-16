@@ -7,12 +7,16 @@ import type {
 } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import type { Prisma } from "@prisma/client";
-import prisma from "@/lib/prisma";
+import  {Prisma, PrismaClient} from "@prisma/client";
+// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
+import prismaJs from "./prisma.mjs";
 import { synchronize } from "@/lib/synchronize"; // nouvelle signature acceptant prismaUserId optionnel
 import type { JWT } from "next-auth/jwt";
 import type { DiscordProfile } from "@/types/discord"; // Assurez-vous que ce type est défini dans votre projet
 import addUserToGuild from "@/lib/addUserToGuild"; // Import de la fonction pour ajouter l'utilisateur au serveur
+
+// @ts-expect-error: prisma.mjs est en JS, TS ne peut pas inférer le type
+const prisma: PrismaClient = prismaJs;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -69,6 +73,16 @@ export const authOptions: NextAuthOptions = {
       if (user && session.user) {
         session.user.id = user.id;
         session.user.name = user.name ?? undefined;
+
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { lastPixelPlaced: true },
+        });
+
+        if (dbUser) {
+          session.user.lastPixelPlaced = dbUser.lastPixelPlaced ?? null;
+        }
+
       }
       return session;
     },

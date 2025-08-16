@@ -28,6 +28,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "scripts/test-prisma.js"
-  ],
+, "src/lib/prisma.js", "src/lib/prisma.js"  ],
   "exclude": ["node_modules"]
 }

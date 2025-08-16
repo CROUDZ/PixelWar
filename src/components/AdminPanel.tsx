@@ -4,7 +4,7 @@ import { io, Socket } from "socket.io-client";
 interface PixelUpdate {
   x: number;
   y: number;
-  colorIndex: number;
+  color: number;
   username?: string;
 }
 
@@ -15,7 +15,7 @@ interface AdminStats {
   recentActions: Array<{
     x: number;
     y: number;
-    colorIndex: number;
+    color: number;
     username?: string;
     timestamp: number;
   }>;
@@ -173,11 +173,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       <span
                         className="inline-block w-4 h-4 rounded border border-gray-300"
                         style={{
-                          backgroundColor: `hsl(${action.colorIndex * 22.5}, 70%, 50%)`,
+                          backgroundColor: `hsl(${action.color * 22.5}, 70%, 50%)`,
                         }}
                       />
                       <span className="ml-2 text-gray-600">
-                        #{action.colorIndex}
+                        #{action.color}
                       </span>
                     </td>
                   </tr>

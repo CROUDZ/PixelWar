@@ -11,8 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^6.14.0",
-    "prisma": "^6.14.0",
+    "dotenv": "^17.2.1",
     "redis": "^5.8.1",
     "ws": "^8.18.3"
   }

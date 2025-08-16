@@ -1,32 +1,53 @@
 // server.js (CommonJS)
-import WebSocket, { WebSocketServer } from "ws";
+// Assure-toi d'avoir installé: ws, redis (v4), @prisma/client
+import { config } from "dotenv";
+import { WebSocketServer } from "ws";
 import redis from "redis";
-import prisma from "./prisma.js";
+import prisma from "../src/lib/prisma.mjs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const PORT = 8080;
-const GRID_KEY = "pixel-grid";
-const WIDTH = 500;
-const HEIGHT = 500;
-const DEFAULT_COLOR = "#FFFFFF";
-const COOLDOWN_DURATION = 60 * 1000; // 60 secondes en millisecondes
+// Get the directory of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from parent directory
+config({ path: resolve(__dirname, "../.env") });
+
+// --- Config ---
+const PORT = Number(process.env.WS_PORT || 8080);
+const GRID_KEY = process.env.GRID_KEY || "pixel-grid";
+const QUEUE_KEY = process.env.QUEUE_KEY || "pixel-queue";
+const WIDTH = Number(process.env.GRID_WIDTH || 500);
+const HEIGHT = Number(process.env.GRID_HEIGHT || 500);
+const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFF";
+
+const FLUSH_INTERVAL_MS = Number(process.env.FLUSH_INTERVAL_MS || 100); // consumer flush
+const BATCH_MAX = Number(process.env.BATCH_MAX || 1000); // items per DB write
+const DEFAULT_COOLDOWN_MS = Number(process.env.COOLDOWN_MS || 30_000); // 30s cooldown
+const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000); // debounce Redis grid SAVE
 
 (async () => {
-  // Création et connexion Redis (v4+)
-  const client = redis.createClient();
+  // --- Redis client v4 ---
+  const redisUrl = process.env.REDIS_URL || undefined;
+  const client = redis.createClient(redisUrl ? { url: redisUrl } : {});
   client.on("error", (err) => console.error("Redis error:", err));
   await client.connect();
   console.log("Redis connected");
 
-  // Charger ou initialiser la grille une seule fois (shared)
+  // --- Load or init grid in memory (array of colors length = WIDTH*HEIGHT) ---
   let grid;
-  const loadGrid = async () => {
+  async function loadGrid() {
     const raw = await client.get(GRID_KEY);
     if (raw) {
       try {
-        grid = JSON.parse(raw);
-        if (!Array.isArray(grid) || grid.length !== WIDTH * HEIGHT)
-          throw new Error("Bad grid");
-      } catch {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length !== WIDTH * HEIGHT) {
+          throw new Error("Bad grid shape");
+        }
+        grid = parsed;
+      } catch (e) {
+        console.warn("Grid corrupted or invalid, reinitializing:", e.message || e);
         grid = new Array(WIDTH * HEIGHT).fill(DEFAULT_COLOR);
         await client.set(GRID_KEY, JSON.stringify(grid));
       }
@@ -35,115 +56,281 @@ const COOLDOWN_DURATION = 60 * 1000; // 60 secondes en millisecondes
       await client.set(GRID_KEY, JSON.stringify(grid));
     }
     console.log("Grid loaded, size =", grid.length);
-  };
-
+  }
   await loadGrid();
 
-  // Serveur WebSocket
+  // --- WebSocket server ---
   const wss = new WebSocketServer({ port: PORT }, () => {
-    console.log(`WebSocket server started on ws://localhost:${PORT}`);
+    console.log(`WebSocket server started on ws://0.0.0.0:${PORT}`);
   });
 
-  // Simple rate-limit / cooldown map (clé = userId ou ws._id)
+  // --- In-memory helpers ---
+  // Note: buffer is now persisted into Redis queue (RPUSH) to avoid data loss on crash.
+  // But we keep a small in-memory buffer length metric.
+  let flushing = false;
+
+  // cooldown map per user or socket id
   const lastPlaced = new Map();
 
-  // Broadcast util
-  const broadcast = (msg) => {
-    const raw = JSON.stringify(msg);
-    wss.clients.forEach((c) => {
-      if (c.readyState === WebSocket.OPEN) c.send(raw);
-    });
-  };
+  // --- Debounced save of grid to Redis (avoid SET every pixel) ---
+  let saveScheduled = false;
+  function scheduleSaveGrid() {
+    if (saveScheduled) return;
+    saveScheduled = true;
+    setTimeout(async () => {
+      try {
+        await client.set(GRID_KEY, JSON.stringify(grid));
+        // console.log("Grid saved to Redis (debounced)");
+      } catch (e) {
+        console.error("Redis autosave failed:", e);
+      } finally {
+        saveScheduled = false;
+      }
+    }, GRID_SAVE_DEBOUNCE_MS);
+  }
 
-  wss.on("connection", async (ws) => {
-    // Optionnel : assigner un id temporaire à la socket
+  // --- Broadcast helper ---
+  function broadcast(obj) {
+    const raw = JSON.stringify(obj);
+    for (const c of wss.clients) {
+      if (c.readyState === 1) {
+        try {
+          c.send(raw);
+        } catch (e) {
+          console.warn("Failed to send message to client:", c._id, e);
+        }
+      }
+    }
+  }
+
+  // --- Validate incoming placePixel payload ---
+  function validatePlacePixel(data) {
+    if (!data || data.type !== "placePixel") return null;
+    const x = Number(data.x);
+    const y = Number(data.y);
+    const color = typeof data.color === "string" ? data.color : null;
+    const userId = data.userId ?? null;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !color) return null;
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return null;
+    return { x: Math.trunc(x), y: Math.trunc(y), color, userId };
+  }
+
+  // --- Push to Redis queue (RPUSH) ---
+  async function pushToQueue(item) {
+    try {
+      await client.rPush(QUEUE_KEY, JSON.stringify(item));
+    } catch (e) {
+      console.error("Failed to push to Redis queue, fallback to in-memory (risky):", e);
+      // As fallback, try to keep in memory by unshift to a small array (not implemented here).
+      // Better to alert and restart consumer.
+    }
+  }
+
+  // --- Consumer: flush items from Redis queue to DB in batch ---
+  async function flushRedisQueue() {
+    if (flushing) return;
+    flushing = true;
+    try {
+      // Read up to BATCH_MAX items
+      const items = await client.lRange(QUEUE_KEY, 0, BATCH_MAX - 1);
+      if (!items || items.length === 0) {
+        flushing = false;
+        return;
+      }
+
+      console.log(`Flushing ${items.length} item(s) from Redis queue to DB...`);
+      console.log("Items:", items);
+
+      // Trim the list to remove the items we are going to process
+      // Keep elements from index items.length .. -1
+      await client.lTrim(QUEUE_KEY, items.length, -1);
+
+      // Parse payload
+      const toWrite = items.map((s) => {
+        try {
+          return JSON.parse(s);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+
+      if (toWrite.length === 0) {
+        flushing = false;
+        return;
+      }
+
+      // Prepare payload for Prisma
+      const payload = toWrite.map((p) => ({
+        x: p.x,
+        y: p.y,
+        color: p.color,
+        userId: p.userId ?? null,
+      }));
+
+      const userIds = Array.from(new Set(payload.map((p) => p.userId).filter(Boolean)));
+
+      // Transaction: createMany + updateMany for users' lastPixelPlaced
+      await prisma.$transaction(async (tx) => {
+        await tx.pixelAction.createMany({
+          data: payload,
+          skipDuplicates: false,
+        });
+
+        console.log(`Persisting ${payload.length} pixel(s) to DB...`);
+        console.log(`User IDs to update: ${userIds.join(", ")}`);
+
+        if (userIds.length > 0) {
+          await tx.user.updateMany({
+            where: { id: { in: userIds } },
+            data: { lastPixelPlaced: new Date() },
+          });
+        }
+      });
+
+      // Success: log basic metric
+      console.log(`Flushed ${payload.length} pixel(s) to DB (users updated: ${userIds.length})`);
+    } catch (err) {
+      console.error("Error flushing Redis queue to DB:", err);
+      // In case of error (DB down...), items were already removed from list.
+      // To be safe, requeue the failed items by pushing them back.
+      // As a simple approach, push back the items that were parsed.
+      // NOTE: this is best-effort; if parsing or store failed, log and alert in prod.
+      try {
+        // Attempt to re-push items we failed to persist (best-effort)
+        // If 'items' variable exists in this scope, requeue them. Otherwise skip.
+        if (typeof items !== "undefined" && items && items.length > 0) {
+          // push all back (could lead to duplicates if partial success occurred)
+          for (const s of items) {
+            try {
+              await client.rPush(QUEUE_KEY, s);
+            } catch (e) {
+              console.error("Failed to requeue item:", e);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Re-queue attempt failed:", e);
+      }
+    } finally {
+      flushing = false;
+    }
+  }
+
+  // Periodic consumer
+  const flushInterval = setInterval(() => {
+    void flushRedisQueue();
+  }, FLUSH_INTERVAL_MS);
+
+  // --- Graceful shutdown: try to flush queue and save grid ---
+  async function gracefulShutdown() {
+    console.log("Shutting down - flushing Redis queue and saving grid...");
+    clearInterval(flushInterval);
+
+    // Try multiple times to flush the queue
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        await flushRedisQueue();
+        const remaining = await client.lLen(QUEUE_KEY);
+        console.log("Remaining queue length:", remaining);
+        if (remaining === 0) break;
+      } catch (e) {
+        console.error("Error during shutdown flush attempt:", e);
+      }
+      // small delay before retry
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    // Save current grid to Redis
+    try {
+      await client.set(GRID_KEY, JSON.stringify(grid));
+      console.log("Grid saved to Redis on shutdown.");
+    } catch (e) {
+      console.error("Error saving grid on shutdown:", e);
+    }
+
+    try {
+      await client.quit();
+    } catch (e) {
+     console.error("Error disconnecting Redis:", e);
+    }
+
+    try {
+      await prisma.$disconnect();
+    } catch (e) {
+      console.error("Error disconnecting Prisma:", e);
+    }
+    process.exit(0);
+  }
+
+  process.on("SIGINT", gracefulShutdown);
+  process.on("SIGTERM", gracefulShutdown);
+
+  // --- Handle WS connections ---
+  wss.on("connection", (ws) => {
     ws._id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     console.log("Client connected:", ws._id);
 
-    // Envoyer l'état complet (init)
-    ws.send(
-      JSON.stringify({ type: "init", width: WIDTH, height: HEIGHT, grid }),
-    );
+    // send init (grid snapshot)
+    try {
+      ws.send(JSON.stringify({ type: "init", width: WIDTH, height: HEIGHT, grid }));
+    } catch (e) {
+      console.warn("Failed to send init to client", e);
+    }
 
     ws.on("message", async (msg) => {
       let data;
       try {
         data = JSON.parse(msg.toString());
       } catch (e) {
-        return console.warn("Bad JSON:", e);
+        console.warn("Invalid JSON from client:", ws._id, msg.toString(), e);
+        return;
       }
 
       if (data.type === "placePixel") {
-        const { x, y, color, userId } = data;
-        if (typeof x !== "number" || typeof y !== "number") return;
-        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+        const place = validatePlacePixel(data);
+        if (!place) return;
 
-        // Vérification du cooldown côté serveur
-        if (userId) {
+        const key = place.userId || ws._id;
+        const now = Date.now();
+        const last = lastPlaced.get(key) || 0;
+        const COOLDOWN = typeof data.booster === "boolean" && data.booster ? DEFAULT_COOLDOWN_MS * 0.75 : DEFAULT_COOLDOWN_MS;
+        if (now - last < COOLDOWN) {
           try {
-            const user = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { lastPixelPlaced: true }
-            });
-
-            if (user && user.lastPixelPlaced) {
-              const now = new Date();
-              const timeSinceLastPixel = now.getTime() - user.lastPixelPlaced.getTime();
-              
-              if (timeSinceLastPixel < COOLDOWN_DURATION) {
-                const cooldownRemaining = Math.ceil((COOLDOWN_DURATION - timeSinceLastPixel) / 1000);
-                ws.send(JSON.stringify({ 
-                  type: "error", 
-                  message: `Cooldown actif: ${cooldownRemaining}s restantes`
-                }));
-                return;
-              }
-            }
-
-            // Mettre à jour le lastPixelPlaced
-            await prisma.user.update({
-              where: { id: userId },
-              data: { lastPixelPlaced: new Date() }
-            });
-          } catch (error) {
-            console.error('Erreur lors de la vérification du cooldown:', error);
-            ws.send(JSON.stringify({ type: "error", message: "Erreur serveur" }));
-            return;
-          }
-        } else {
-          // Fallback pour les utilisateurs non authentifiés (ancien système)
-          const key = ws._id;
-          const now = Date.now();
-          const last = lastPlaced.get(key) || 0;
-          if (now - last < COOLDOWN_DURATION) {
-            ws.send(JSON.stringify({ type: "error", message: "Cooldown" }));
-            return;
-          }
-          lastPlaced.set(key, now);
+            ws.send(JSON.stringify({ type: "error", message: "Cooldown", retryAfterMs: COOLDOWN - (now - last) }));
+          } catch {}
+          return;
         }
+        lastPlaced.set(key, now);
 
-        // Update in-memory grid
-        grid[y * WIDTH + x] = color;
+        // update in-memory grid (latest state)
+        const idx = place.y * WIDTH + place.x;
+        grid[idx] = place.color;
 
-        // Persist to Redis (on peut batcher, ici on sauvegarde immédiatement)
-        try {
-          await client.set(GRID_KEY, JSON.stringify(grid));
-          console.log(
-            `Pixel placed at (${x}, ${y}) with color ${color} by ${key}`,
-          );
-        } catch (err) {
-          console.error("Redis set failed:", err);
-        }
+        // schedule debounced save of full grid to Redis
+        scheduleSaveGrid();
 
-        // Broadcast à tous
+        // push the pixel event to Redis queue for durable batch persistence
+        await pushToQueue({ x: place.x, y: place.y, color: place.color, userId: place.userId ?? null, timestamp: now });
+
+        // broadcast immediately to clients
         broadcast({
           type: "updatePixel",
-          x,
-          y,
-          color,
+          x: place.x,
+          y: place.y,
+          color: place.color,
           userId: key,
           timestamp: now,
         });
+
+        // If queue length is large, trigger a flush (non-blocking)
+        try {
+          const qlen = await client.lLen(QUEUE_KEY);
+          if (qlen >= BATCH_MAX) {
+            void flushRedisQueue();
+          }
+        } catch (e) {
+          console.error("Error checking Redis queue length:", e);
+        }
       }
     });
 
@@ -152,17 +339,9 @@ const COOLDOWN_DURATION = 60 * 1000; // 60 secondes en millisecondes
     });
 
     ws.on("error", (err) => {
-      console.error("WS error:", err);
+      console.error("WS error on socket", ws._id, err);
     });
   });
 
-  // Handler pour sauvegarder périodiquement (optionnel)
-  setInterval(async () => {
-    try {
-      await client.set(GRID_KEY, JSON.stringify(grid));
-      // console.log("Grid auto-saved to Redis");
-    } catch (e) {
-      console.error("Auto-save failed:", e);
-    }
-  }, 10_000); // toutes les 10s
+  console.log("Server ready.");
 })();

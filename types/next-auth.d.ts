@@ -19,6 +19,7 @@ declare module "next-auth" {
       accessToken?: string | null;
       refreshToken?: string | null;
       expires?: number | null;
+      lastPixelPlaced?: DateTime | null; // optional, if you want to keep it
     } & DefaultSession["user"];
   }
 }
