@@ -21,7 +21,9 @@ declare module "next-auth" {
       expires?: number | null;
       lastPixelPlaced?: DateTime | null; // optional, if you want to keep it
       boosted?: boolean;
-      linked?: boolean; // new field for linked status
+      linked?: boolean;
+      role?: "USER" | "ADMIN"; // ensure role is always present
+      twoFA?: boolean;
     } & DefaultSession["user"];
   }
 }

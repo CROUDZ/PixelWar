@@ -105,7 +105,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
           <PixelSelector onSelect={setColor} valide={true} />
         </label>
       </div>
-      {remainingTime > 0 && (
+      {session?.user?.linked && remainingTime > 0 && (
         <p className="text-sm text-red-500 mb-2">
           Vous devez attendre {remainingTime} seconde
           {remainingTime > 1 ? "s" : ""} avant de placer un pixel.
@@ -115,7 +115,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
         <button
           onClick={handleValidate}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
-          disabled={status === "loading" || remainingTime > 0}
+          disabled={status === "loading" || (session?.user?.linked && remainingTime > 0)}
         >
           Valider
         </button>

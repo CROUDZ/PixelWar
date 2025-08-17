@@ -52,6 +52,8 @@ model User {
   joinGuild       Boolean       @default(false)
   boosted         Boolean       @default(false)
   role            Role          @default(USER)
+  twoFA           Boolean       @default(false)
+  twoFASecret     String?
   lastPixelPlaced DateTime?
   accounts        Account[]
   sessions        Session[]
@@ -76,6 +78,5 @@ model PixelAction {
 
 enum Role {
   USER
-  MODERATOR
   ADMIN
 }

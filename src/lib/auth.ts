@@ -72,13 +72,15 @@ export const authOptions: NextAuthOptions = {
 
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { lastPixelPlaced: true, boosted: true, linked: true },
+          select: { lastPixelPlaced: true, boosted: true, linked: true, role: true, twoFA:true },
         });
 
         if (dbUser) {
           session.user.lastPixelPlaced = dbUser.lastPixelPlaced ?? false;
           session.user.boosted = dbUser.boosted ?? false;
           session.user.linked = dbUser.linked ?? false;
+          session.user.role = dbUser.role === "USER" || dbUser.role === "ADMIN" ? dbUser.role : "USER";
+          session.user.twoFA = !!dbUser.twoFA;
         }
       }
       return session;
