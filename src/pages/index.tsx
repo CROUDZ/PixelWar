@@ -1,5 +1,5 @@
 import React from "react";
-import PixelCanvas from "../components/PixelCanvas";
+import PixelCanvas from "../components/pixel/PixelCanvas";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 
@@ -7,7 +7,7 @@ const Header = dynamic(() => import("../components/Header"), {
   ssr: false,
 });
 const PixelInformations = dynamic(
-  () => import("../components/PixelInformations"),
+  () => import("../components/pixel/PixelInformations"),
   {
     ssr: false,
   },

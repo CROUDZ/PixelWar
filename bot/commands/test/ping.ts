@@ -4,7 +4,7 @@ import {
   Client,
 } from "discord.js";
 
-export default {
+const pingCommand = {
   data: new SlashCommandBuilder()
     .setName("ping")
     .setDescription("Replies with Pong!"),
@@ -14,3 +14,5 @@ export default {
     );
   },
 };
+
+export default pingCommand;

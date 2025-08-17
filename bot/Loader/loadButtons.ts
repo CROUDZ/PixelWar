@@ -8,19 +8,14 @@ const __dirname = path.dirname(__filename);
 
 const buttonsPath = path.join(__dirname, "../buttons");
 
-// Explicitly type the execute function and add the required data property
+// Nouvelle interface sans data
 interface Button {
   default: {
     id: string;
     execute: (...args: unknown[]) => void;
-    data: {
-      label: string;
-      style: string;
-    };
   };
 }
 
-// Assign the arrow function to a variable before exporting
 const loadButtons = (client: Client): void => {
   const items = fs.readdirSync(buttonsPath);
 
@@ -36,13 +31,13 @@ const loadButtons = (client: Client): void => {
         import(pathToFileURL(filePath).toString()).then((button: Button) => {
           if (
             button.default?.id &&
-            typeof button.default?.execute === "function" &&
-            button.default?.data
+            typeof button.default?.execute === "function"
           ) {
             client.buttons.set(button.default.id, button.default);
+            console.log(`Button ${button.default.id} loaded from ${filePath}`);
           } else {
             console.error(
-              `[WARNING] Button in ${filePath} is missing required "id", "execute", or "data" properties`,
+              `[WARNING] Button in ${filePath} is missing required "id" or "execute" properties`,
             );
           }
         });
@@ -51,13 +46,13 @@ const loadButtons = (client: Client): void => {
       import(pathToFileURL(itemPath).toString()).then((button: Button) => {
         if (
           button.default?.id &&
-          typeof button.default?.execute === "function" &&
-          button.default?.data
+          typeof button.default?.execute === "function"
         ) {
           client.buttons.set(button.default.id, button.default);
+          console.log(`Button ${button.default.id} loaded from ${itemPath}`);
         } else {
           console.error(
-            `[WARNING] Button in ${itemPath} is missing required "id", "execute", or "data" properties`,
+            `[WARNING] Button in ${itemPath} is missing required "id" or "execute" properties`,
           );
         }
       });

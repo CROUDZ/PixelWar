@@ -22,7 +22,6 @@ declare module "discord.js" {
       string,
       {
         execute: (...args: unknown[]) => void;
-        data: { label: string; style: string };
       }
     >;
     app: ExpressApplication; // Explicitly type this as `ExpressApplication`

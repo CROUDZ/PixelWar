@@ -20,7 +20,8 @@
     "bot:minify": "find bot/dist -type f -name '*.js' -exec terser --compress --mangle --module -o {} {} \\;",
     "bot:dev": "npm run bot:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node bot/dist/index.js",
     "bot:start": "clear && NODE_ENV=production node bot/dist/index.js ",
-    "bot:clean": "rimraf bot/dist && clear"
+    "bot:clean": "rimraf bot/dist && clear",
+    "register:commands": "ts-node bot/dist/Loader/registerCommands.js"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

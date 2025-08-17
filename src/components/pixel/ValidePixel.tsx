@@ -65,6 +65,9 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
       openInPopup("http://localhost:3000/auth/discord-redirect");
       return;
     }
+    if (!session.user.linked) {
+      openInPopup("http://localhost:3000/link");
+    }
 
     if (remainingTime > 0) return; // on bloque si cooldown actif
 

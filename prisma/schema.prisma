@@ -48,6 +48,7 @@ model User {
   accessToken     String?
   refreshToken    String?
   expires         Int?
+  linked          Boolean       @default(false)
   joinGuild       Boolean       @default(false)
   boosted         Boolean       @default(false)
   role            Role          @default(USER)

@@ -20,7 +20,8 @@ declare module "next-auth" {
       refreshToken?: string | null;
       expires?: number | null;
       lastPixelPlaced?: DateTime | null; // optional, if you want to keep it
-      boosted?: boolean | null;
+      boosted?: boolean;
+      linked?: boolean; // new field for linked status
     } & DefaultSession["user"];
   }
 }

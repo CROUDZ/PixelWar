@@ -5,7 +5,10 @@ import Redis from "ioredis";
 
 const pub = new Redis();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -18,7 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await prisma.session.deleteMany({ where: { userId } });
 
     console.log("[guildMemberRemove] update user joinGuild=false for", userId);
-    await prisma.user.update({ where: { id: userId }, data: { joinGuild: false } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { joinGuild: false },
+    });
 
     console.log("[guildMemberRemove] publishing redis logout for", userId);
     const published = await pub.publish("logout", JSON.stringify({ userId }));

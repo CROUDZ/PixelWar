@@ -14,6 +14,10 @@ sub.subscribe("logout", (err, count) => {
   if (err) console.error("Redis subscribe error:", err);
   else console.log("Subscribed to logout channel, subscriber count:", count);
 });
+sub.subscribe("link", (err, count) => {
+  if (err) console.error("Redis subscribe error:", err);
+  else console.log("Subscribed to link channel, subscriber count:", count);
+});
 
 sub.on("message", (channel, message) => {
   console.log("[server.js] Redis message:", channel, message);
@@ -47,6 +51,88 @@ sub.on("message", (channel, message) => {
     } catch (e) {
       console.error("Invalid logout payload:", e);
     }
+  }
+  if (channel === "link") {
+  (async () => {
+    try {
+      const payload = JSON.parse(message);
+      const discordId = String(payload.userId);
+      console.log("[server.js] link event for discordId:", discordId, "payload:", payload);
+
+      // find account -> get internal userId
+      let account = null;
+      try {
+        account = await prisma.account.findFirst({
+          where: { provider: "discord", providerAccountId: discordId },
+          select: { id: true, userId: true, providerAccountId: true },
+        });
+        console.log("[server.js] prisma: account lookup result:", account);
+      } catch (e) {
+        console.error("[server.js] prisma error while finding account:", e);
+      }
+
+      if (!account) {
+        console.warn(`[server.js] Aucun Account trouvé pour discordId=${discordId}.`);
+      } else {
+        try {
+          const updated = await prisma.user.update({
+            where: { id: account.userId },
+            data: { linked: true },
+          });
+          console.log(`[server.js] prisma: user ${account.userId} updated linked=true`, {
+            updatedId: updated.id,
+            linked: updated.linked,
+          });
+        } catch (e) {
+          console.error("[server.js] prisma update error for link:", e);
+        }
+      }
+
+      // Notify sockets for both keys: discordId and internal userId (if known)
+      const notifiedSocketIds = new Set();
+
+      // helper to notify all sockets in a set
+      function notifySet(set) {
+        if (!set) return;
+        for (const s of Array.from(set)) {
+          if (s && s.readyState === s.OPEN && !notifiedSocketIds.has(s._id)) {
+            try {
+              const payloadToSend = {
+                type: "linked",
+                ts: Date.now(),
+                clientToken: s.clientToken ?? null,
+                forDiscordId: discordId,
+              };
+              s.send(JSON.stringify(payloadToSend));
+              console.log("[server.js] sent linked to socket", s._id, "token=", s.clientToken);
+              notifiedSocketIds.add(s._id);
+            } catch (e) {
+              console.error("[server.js] failed to send linked to socket:", e);
+            }
+          }
+        }
+      }
+
+      // notify sockets keyed by discordId
+      const setByDiscord = userSockets.get(discordId);
+      if (setByDiscord && setByDiscord.size > 0) {
+        console.log(`[server.js] sending 'linked' to ${setByDiscord.size} socket(s) for discordId ${discordId}`);
+        notifySet(setByDiscord);
+      }
+
+      // notify sockets keyed by internal userId (fallback)
+      if (account && account.userId) {
+        const setByUser = userSockets.get(String(account.userId));
+        if (setByUser && setByUser.size > 0) {
+          console.log(`[server.js] also sending 'linked' to ${setByUser.size} socket(s) for internal user ${account.userId}`);
+          notifySet(setByUser);
+        }
+      }
+    } catch (e) {
+      console.error("[server.js] invalid link payload or error:", e);
+    }
+  })();
+  return;
   }
 });
 
@@ -388,11 +474,30 @@ initCounter();
         return;
       }
 
-      if (data.type === "auth" && data.userId) {
-        addUserSocket(data.userId, ws);
-        console.log(`User registered on WS: ${data.userId}`);
-        return;
-      }
+          if (data.type === "auth") {
+          try {
+            const internalId = data.userId ? String(data.userId) : null; // internal user id (session.user.id)
+            const discordId = data.discordId ? String(data.discordId) : null; // providerAccountId (discord)
+            const token = data.clientToken ? String(data.clientToken) : null;
+
+            ws.clientToken = token;
+            ws.internalUserId = internalId;
+            ws.discordId = discordId;
+
+            // register under both keys if present
+            if (discordId) {
+              addUserSocket(discordId, ws);
+              console.log(`[WS ${ws._id}] auth registered discordId=${discordId} token=${token}`);
+            }
+            if (internalId) {
+              addUserSocket(internalId, ws);
+              console.log(`[WS ${ws._id}] auth registered internalUserId=${internalId} token=${token}`);
+            }
+          } catch (e) {
+            console.error("[WS] auth handling error:", e);
+          }
+          return;
+        }
 
       if (data.type === "placePixel") {
         const place = validatePlacePixel(data);

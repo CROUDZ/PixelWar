@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import PixelSelector from "@/components/PixelSelector";
-import ValidePixel from "@/components/ValidePixel";
+import PixelSelector from "@/components/pixel/PixelSelector";
+import ValidePixel from "@/components/pixel/ValidePixel";
 import { useSession } from "next-auth/react";
 import { getWS, subscribeWS } from "@/lib/ws";
 

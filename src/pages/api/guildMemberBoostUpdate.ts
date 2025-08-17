@@ -16,7 +16,9 @@ export default async function handler(
     return res.status(400).json({ error: "Invalid boosted value" });
   }
 
-  console.log(`[guildMemberBoostUpdate] Updating boost status for user: ${userId}, boosted: ${boosted}`);
+  console.log(
+    `[guildMemberBoostUpdate] Updating boost status for user: ${userId}, boosted: ${boosted}`,
+  );
 
   try {
     await prisma.user.update({
@@ -29,6 +31,8 @@ export default async function handler(
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("[guildMemberBoostUpdate] error:", error);
-    return res.status(500).json({ error: "Failed to update user boost status" });
+    return res
+      .status(500)
+      .json({ error: "Failed to update user boost status" });
   }
 }

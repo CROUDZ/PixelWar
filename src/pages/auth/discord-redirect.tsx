@@ -6,18 +6,21 @@ import { signIn, useSession } from "next-auth/react";
 import Loading from "@/components/Loading";
 
 const DiscordRedirectPage: React.FC = () => {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+  console.log("DiscordRedirectPage status:", status);
 
   useEffect(() => {
     if (status === "loading") return;
-    if (status === "authenticated") {
-      window.location.href = window.location.origin + "/closePage";
+    if (status === "authenticated" && !session?.user?.linked) {
+      window.location.href = window.location.origin + "/link";
+    } else if (status === "authenticated" && session?.user?.linked) {
+      window.location.href = window.location.origin + "/close";
     } else {
       signIn("discord", {
         callbackUrl: window.location.origin + "/auth/discord-redirect",
       });
     }
-  }, [status]);
+  }, [status, session?.user?.linked]);
 
   return <Loading />;
 };

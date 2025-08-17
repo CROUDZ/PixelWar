@@ -1,124 +1,112 @@
 let ws: WebSocket | null = null;
 let listeners: ((data: Record<string, unknown>) => void)[] = [];
-let isConnecting = false;
 let reconnectTimeout: NodeJS.Timeout | null = null;
+let connectInProgress = false;
+const sendQueue: Record<string, unknown>[] = [];
+const URL =
+  typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? `wss://${window.location.hostname}:8080` // adapte si en prod (utilise wss)
+    : "ws://localhost:8080";
 
-export function getWS() {
-  console.log(
-    "getWS called, current ws state:",
-    ws?.readyState,
-    "isConnecting:",
-    isConnecting,
-  );
+function createSocket() {
+  console.log("[WS] createSocket ->", URL);
+  connectInProgress = true;
+  ws = new WebSocket(URL);
 
-  if (!ws || ws.readyState === WebSocket.CLOSED) {
-    if (isConnecting) {
-      console.log("Connection already in progress, returning existing ws");
-      return ws;
-    }
+  ws.onopen = () => {
+    console.log("[WS] onopen");
+    connectInProgress = false;
 
-    console.log("Creating new WebSocket connection...");
-    isConnecting = true;
-    ws = new WebSocket("ws://localhost:8080");
-
-    ws.onopen = () => {
-      console.log(
-        "Connected to WebSocket server - listeners count:",
-        listeners.length,
-      );
-      isConnecting = false;
-    };
-
-    ws.onmessage = (event) => {
-      console.log("Raw WebSocket message:", event.data);
+    // flush send queue
+    while (sendQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+      const item = sendQueue.shift();
       try {
-        const data = JSON.parse(event.data);
-        console.log(
-          "Parsed WebSocket data:",
-          data,
-          "will notify",
-          listeners.length,
-          "listeners",
-        );
-
-        // Notifier tous les listeners
-        listeners.forEach((fn, index) => {
-          try {
-            console.log(`Calling listener ${index}...`);
-            fn(data);
-          } catch (e) {
-            console.error(`Error in WebSocket listener ${index}:`, e);
-          }
-        });
+        ws.send(JSON.stringify(item));
+        console.log("[WS] flushed queued message:", item);
       } catch (e) {
-        console.error("Invalid WS message:", event.data, e);
+        console.error("[WS] flush send error:", e);
       }
-    };
+    }
+  };
 
-    ws.onclose = (event) => {
-      console.log(
-        "WebSocket disconnected, retry in 3s...",
-        event.reason || event.code,
-      );
-      isConnecting = false;
+  ws.onmessage = (ev) => {
+    console.log("[WS] raw message:", ev.data);
+    try {
+      const data = JSON.parse(ev.data);
+      console.log("[WS] parsed message:", data);
+      listeners.forEach((fn) => {
+        try {
+          fn(data);
+        } catch (e) {
+          console.error("[WS] listener error:", e);
+        }
+      });
+    } catch (e) {
+      console.error("[WS] invalid json message:", e);
+    }
+  };
 
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
+  ws.onclose = (ev) => {
+    console.warn("[WS] onclose", ev.code, ev.reason);
+    ws = null;
+    connectInProgress = false;
+    // try reconnect
+    if (reconnectTimeout) window.clearTimeout(reconnectTimeout);
+    reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null;
+      console.log("[WS] reconnecting...");
+      createSocket();
+    }, 1500);
+  };
 
-      reconnectTimeout = setTimeout(() => {
-        console.log("Attempting to reconnect...");
-        ws = null;
-        getWS();
-        reconnectTimeout = null;
-      }, 3000);
-    };
-
-    ws.onerror = (err) => {
-      console.error("WebSocket error:", err);
-      isConnecting = false;
+  ws.onerror = (err) => {
+    console.error("[WS] onerror", err);
+    try {
       ws?.close();
-    };
-  } else {
-    console.log("Reusing existing WebSocket connection");
-  }
+    } catch {}
+  };
 
   return ws;
 }
 
-export function subscribeWS(callback: (data: Record<string, unknown>) => void) {
-  console.log(
-    "subscribeWS called, adding listener. Total listeners before:",
-    listeners.length,
-  );
-  listeners.push(callback);
-  console.log("Total listeners after:", listeners.length);
+export function getWS() {
+  if (!ws && !connectInProgress) createSocket();
+  return ws;
+}
 
-  // S'assurer qu'une connexion WebSocket existe
-  const socket = getWS();
-  console.log("WebSocket state after getWS():", socket?.readyState);
+export function subscribeWS(fn: (data: Record<string, unknown>) => void) {
+  listeners.push(fn);
+  console.log("[WS] subscribe, total listeners =", listeners.length);
+  // ensure socket is created
+  getWS();
 
-  // Fonction de désabonnement
+  // return unsubscribe
   return () => {
-    console.log("Unsubscribing listener. Listeners before:", listeners.length);
-    listeners = listeners.filter((fn) => fn !== callback);
-    console.log("Listeners after:", listeners.length);
+    listeners = listeners.filter((f) => f !== fn);
+    console.log("[WS] unsubscribe, total listeners =", listeners.length);
   };
 }
 
 export function isWSConnected() {
-  const connected = ws && ws.readyState === WebSocket.OPEN;
-  console.log("isWSConnected check:", connected, "readyState:", ws?.readyState);
-  return connected;
+  return !!ws && ws.readyState === WebSocket.OPEN;
 }
 
-export function sendWS(data: Record<string, unknown>) {
-  const socket = getWS();
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    console.log("Sending WebSocket message:", data);
-    socket.send(JSON.stringify(data));
+export function sendWS(obj: Record<string, unknown>) {
+  try {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      // queue it
+      console.log("[WS] not open, queueing:", obj);
+      sendQueue.push(obj);
+      // ensure socket exists / tries to connect
+      if (!ws && !connectInProgress) createSocket();
+      return false;
+    }
+    ws.send(JSON.stringify(obj));
+    console.log("[WS] sent:", obj);
     return true;
+  } catch (e) {
+    console.error("[WS] send error, queueing:", e, obj);
+    sendQueue.push(obj);
+    return false;
   }
-  console.warn("WebSocket not connected, message not sent:", data);
-  return false;
 }
