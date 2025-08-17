@@ -3,13 +3,16 @@ import speakeasy from "speakeasy";
 import { getSession } from "next-auth/react";
 import prisma from "@/lib/prisma";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   const session = await getSession({ req });
-  
+
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -33,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const verified = speakeasy.totp.verify({
       secret: user.twoFASecret,
       encoding: "base32",
-      token: token.replace(/\s/g, ''),
+      token: token.replace(/\s/g, ""),
       window: 1, // Fenêtre plus stricte pour les actions sensibles
       step: 30,
     });

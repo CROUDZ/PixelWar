@@ -6,19 +6,33 @@
   --background: #ffffff;
   --accent: #acfaf5; /* couleur fournie */
   --accent-600: #7fd9d9; /* teinte plus soutenue */
+  --accent-700: #5fb3b3; /* teinte encore plus soutenue */
   --text: #0f172a; /* texte principal (dark navy) */
+  --text-secondary: #475569; /* texte secondaire */
   --muted: #6b7280;
+  --border: #e2e8f0;
+  --surface: #f8fafc;
+  --surface-hover: #f1f5f9;
   --glass: rgba(172, 250, 245, 0.12);
+  --glass-hover: rgba(172, 250, 245, 0.2);
+  --shadow: rgba(15, 23, 42, 0.1);
 }
 
 /* Mode sombre activable en ajoutant `data-theme="dark"` sur <html> ou <body> */
 .dark {
   --background: #06121a;
   --text: #e6f8f7;
+  --text-secondary: #94a3b8;
   --muted: #94a3b8;
   --accent: #acfaf5;
   --accent-600: #3fbfbf;
+  --accent-700: #2a9b9b;
+  --border: #1e293b;
+  --surface: #0f172a;
+  --surface-hover: #1e293b;
   --glass: rgba(172, 250, 245, 0.06);
+  --glass-hover: rgba(172, 250, 245, 0.12);
+  --shadow: rgba(0, 0, 0, 0.3);
 }
 
 html,

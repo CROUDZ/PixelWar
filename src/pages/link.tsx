@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import { subscribeWS, sendWS } from "@/lib/ws";
 
 function makeToken() {
-  try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
 }
-
 
 export default function LinkPage() {
   const [token] = useState(() => makeToken());
@@ -43,10 +46,18 @@ export default function LinkPage() {
         let attempts = 0;
         authInterval = window.setInterval(() => {
           attempts++;
-          const payload = { type: "auth", userId: body.id ?? null, discordId: body.discordId ?? null, clientToken: token };
+          const payload = {
+            type: "auth",
+            userId: body.id ?? null,
+            discordId: body.discordId ?? null,
+            clientToken: token,
+          };
           sendWS(payload);
           if (attempts >= 30) {
-            if (authInterval) { window.clearInterval(authInterval); authInterval = null; }
+            if (authInterval) {
+              window.clearInterval(authInterval);
+              authInterval = null;
+            }
           }
         }, 300);
       } catch (e) {
@@ -66,13 +77,19 @@ export default function LinkPage() {
     if (!linked) return;
     try {
       if (window.opener && !window.opener.closed) {
-        try { window.opener.postMessage({ type: "discord-linked", token }, "*"); } catch { /* ignore */ }
+        try {
+          window.opener.postMessage({ type: "discord-linked", token }, "*");
+        } catch {
+          /* ignore */
+        }
       }
       window.close();
     } catch (e) {
       console.warn("window.close failed:", e);
     }
-    setTimeout(() => { window.location.href = "/?discord_linked=1"; }, 350);
+    setTimeout(() => {
+      window.location.href = "/?discord_linked=1";
+    }, 350);
   }, [linked, token]);
 
   return (
@@ -80,23 +97,31 @@ export default function LinkPage() {
       <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full flex flex-col items-center space-y-5 border border-blue-300">
         <div className="flex items-center space-x-2 mb-2">
           <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="12" fill="#5865F2"/>
-            <path d="M17 8.5V15.5C17 16.3284 16.3284 17 15.5 17H8.5C7.67157 17 7 16.3284 7 15.5V8.5C7 7.67157 7.67157 7 8.5 7H15.5C16.3284 7 17 7.67157 17 8.5Z" fill="white"/>
+            <circle cx="12" cy="12" r="12" fill="#5865F2" />
+            <path
+              d="M17 8.5V15.5C17 16.3284 16.3284 17 15.5 17H8.5C7.67157 17 7 16.3284 7 15.5V8.5C7 7.67157 7.67157 7 8.5 7H15.5C16.3284 7 17 7.67157 17 8.5Z"
+              fill="white"
+            />
           </svg>
-          <h1 className="text-2xl font-bold text-blue-700">Discord HUB du Rolplay</h1>
+          <h1 className="text-2xl font-bold text-blue-700">
+            Discord HUB du Rolplay
+          </h1>
         </div>
 
         {linked ? (
           <p className="text-gray-700">En attente de liaison...</p>
         ) : linked ? (
-          <p className="text-green-600 font-semibold">Compte lié — fermeture en cours…</p>
+          <p className="text-green-600 font-semibold">
+            Compte lié — fermeture en cours…
+          </p>
         ) : (
           <>
             <p className="text-gray-700 text-center">
               Veuillez aller dans le serveur Discord HUB du Rolplay
             </p>
             <p className="text-gray-600 text-center">
-              Normalement vous avez rejoint automatiquement le serveur Discord.<br />
+              Normalement vous avez rejoint automatiquement le serveur Discord.
+              <br />
               Si ce n'est pas le cas, voici un lien d'invitation :
             </p>
             <a
@@ -105,22 +130,34 @@ export default function LinkPage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span role="img" aria-label="discord">🔗</span> Rejoindre le serveur
+              <span role="img" aria-label="discord">
+                🔗
+              </span>{" "}
+              Rejoindre le serveur
             </a>
             <div className="w-full border-t border-gray-200 my-2"></div>
             <p className="text-gray-700 text-center">
               Ensuite, veuillez vous rendre dans le salon :
             </p>
-            <a href="#nom-du-salon" className="font-bold text-purple-700 underline">Nom du salon</a>
+            <a
+              href="#nom-du-salon"
+              className="font-bold text-purple-700 underline"
+            >
+              Nom du salon
+            </a>
             <p className="text-gray-700 text-center">
-              Et cliquez sur le bouton <span className="bg-blue-100 px-2 py-1 rounded text-blue-700 font-semibold">Lier mon compte</span>
+              Et cliquez sur le bouton{" "}
+              <span className="bg-blue-100 px-2 py-1 rounded text-blue-700 font-semibold">
+                Lier mon compte
+              </span>
             </p>
             <p className="text-gray-500 text-sm text-center">
-              Cette page se fermera automatiquement une fois que vous aurez lié votre compte.
+              Cette page se fermera automatiquement une fois que vous aurez lié
+              votre compte.
             </p>
           </>
         )}
-    </div>
       </div>
+    </div>
   );
 }

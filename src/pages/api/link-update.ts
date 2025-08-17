@@ -16,7 +16,7 @@ export default async function handler(
     console.log("[API] Updating user linked:", userId);
     await prisma.user.update({
       where: { id: userId },
-      data: { linked: true },
+      data: { linked: true, joinGuild: true },
     });
 
     console.log("[API] Update successful:", userId);

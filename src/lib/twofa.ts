@@ -7,7 +7,10 @@ export interface TwoFASetupResult {
   backupCodes?: string[];
 }
 
-export async function generateTwoFASecret(userId: string, email: string): Promise<TwoFASetupResult> {
+export async function generateTwoFASecret(
+  userId: string,
+  email: string,
+): Promise<TwoFASetupResult> {
   const secret = speakeasy.generateSecret({
     name: `PixelWar Admin (${email})`,
     issuer: "PixelWar",
@@ -26,7 +29,10 @@ export async function generateTwoFASecret(userId: string, email: string): Promis
   };
 }
 
-export async function verifyTwoFAToken(userId: string, token: string): Promise<boolean> {
+export async function verifyTwoFAToken(
+  userId: string,
+  token: string,
+): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { twoFASecret: true },
@@ -39,7 +45,7 @@ export async function verifyTwoFAToken(userId: string, token: string): Promise<b
   return speakeasy.totp.verify({
     secret: user.twoFASecret,
     encoding: "base32",
-    token: token.replace(/\s/g, ''), // Supprimer les espaces
+    token: token.replace(/\s/g, ""), // Supprimer les espaces
     window: 2, // Fenêtre de tolérance
     step: 30,
   });
@@ -55,7 +61,7 @@ export async function enableTwoFA(userId: string): Promise<void> {
 export async function disableTwoFA(userId: string): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
-    data: { 
+    data: {
       twoFA: false,
       twoFASecret: null,
     },

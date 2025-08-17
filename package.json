@@ -31,7 +31,7 @@
     "discord.js": "^14.21.0",
     "express": "^5.1.0",
     "express-serve-static-core": "^0.1.1",
-    "framer-motion": "^12.20.2",
+    "framer-motion": "^12.23.12",
     "ioredis": "^5.7.0",
     "lucide-react": "^0.539.0",
     "next": "15.3.4",

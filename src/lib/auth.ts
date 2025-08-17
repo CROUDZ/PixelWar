@@ -72,14 +72,23 @@ export const authOptions: NextAuthOptions = {
 
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { lastPixelPlaced: true, boosted: true, linked: true, role: true, twoFA:true },
+          select: {
+            lastPixelPlaced: true,
+            boosted: true,
+            linked: true,
+            role: true,
+            twoFA: true,
+          },
         });
 
         if (dbUser) {
           session.user.lastPixelPlaced = dbUser.lastPixelPlaced ?? false;
           session.user.boosted = dbUser.boosted ?? false;
           session.user.linked = dbUser.linked ?? false;
-          session.user.role = dbUser.role === "USER" || dbUser.role === "ADMIN" ? dbUser.role : "USER";
+          session.user.role =
+            dbUser.role === "USER" || dbUser.role === "ADMIN"
+              ? dbUser.role
+              : "USER";
           session.user.twoFA = !!dbUser.twoFA;
         }
       }
@@ -98,6 +107,7 @@ export const authOptions: NextAuthOptions = {
           await prisma.user.upsert({
             where: { id: discordProfile.id },
             update: {
+              name: discordProfile.global_name || discordProfile.username,
               global_name: discordProfile.global_name || null,
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
@@ -105,6 +115,7 @@ export const authOptions: NextAuthOptions = {
               image: discordProfile.avatar
                 ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png`
                 : null,
+              joinGuild: true,
             } as Prisma.UserUpdateInput,
             create: {
               id: discordProfile.id,
@@ -117,6 +128,7 @@ export const authOptions: NextAuthOptions = {
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
               expires: account.expires_at || null,
+              joinGuild: true,
             } as Prisma.UserCreateInput,
           });
           await prisma.account.upsert({

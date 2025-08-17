@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import PixelSelector from "@/components/pixel/PixelSelector";
 import ValidePixel from "@/components/pixel/ValidePixel";
 import { useSession } from "next-auth/react";
 import { getWS, subscribeWS } from "@/lib/ws";
@@ -8,11 +7,13 @@ import { getWS, subscribeWS } from "@/lib/ws";
 interface PixelCanvasProps {
   pixelWidth?: number;
   pixelHeight?: number;
+  selectedColor?: string;
 }
 
 export default function PixelCanvas({
   pixelWidth = 100,
   pixelHeight = 100,
+  selectedColor = "#000000",
 }: PixelCanvasProps) {
   const { data: session } = useSession();
   const userId = session?.user?.id;
@@ -29,7 +30,6 @@ export default function PixelCanvas({
     null,
   );
   const [gridData, setGridData] = useState<Record<string, string>>({});
-  const [selectedColor, setSelectedColor] = useState("#FF0000");
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -370,22 +370,15 @@ export default function PixelCanvas({
   return (
     <div
       id="pixel-canvas-parent"
-      className="fixed left-0 right-0 flex justify-center items-center overflow-hidden"
+      className="left-0 right-0 flex justify-center items-center overflow-hidden"
       style={{ top: headerHeight, height: `calc(100vh - ${headerHeight}px)` }}
     >
       <div
-        className="absolute left-0 right-0 bg-white z-0"
+        className=" left-0 right-0 bg-white z-0"
         style={{ top: 0, height: `calc(100vh - ${headerHeight}px)` }}
       />
 
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 md:hidden">
-        <PixelSelector onSelect={setSelectedColor} />
-      </div>
-      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 hidden md:block">
-        <PixelSelector onSelect={setSelectedColor} />
-      </div>
-
-      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+      <div className=" bottom-4 right-4 z-20 flex flex-col gap-2">
         <button
           onClick={() => setZoom((prev) => Math.min(10, prev * 1.2))}
           className="bg-white border border-gray-300 p-2 rounded shadow hover:bg-gray-50"
@@ -410,7 +403,7 @@ export default function PixelCanvas({
       </div>
 
       {!isMobile && (
-        <div className="absolute top-4 right-4 z-20 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+        <div className="top-4 right-4 z-20 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
           {isNavigationMode
             ? "Mode Navigation (Shift/Ctrl) - Glissez pour naviguer"
             : "Cliquez pour placer un pixel - Maintenez Shift/Ctrl + Glissez pour naviguer"}

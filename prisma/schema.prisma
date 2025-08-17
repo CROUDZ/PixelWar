@@ -55,6 +55,7 @@ model User {
   twoFA           Boolean       @default(false)
   twoFASecret     String?
   lastPixelPlaced DateTime?
+  lastSyncAt      DateTime? // Nouveau champ pour le cooldown de synchronisation
   accounts        Account[]
   sessions        Session[]
   pixelActions    PixelAction[]

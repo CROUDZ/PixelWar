@@ -12,18 +12,36 @@ const PixelInformations = dynamic(
     ssr: false,
   },
 );
+const PixelSelector = dynamic(
+  () => import("@/components/pixel/PixelSelector"),
+  {
+    ssr: false,
+  },
+);
 
 const HomePage: React.FC = () => {
   const { data: session } = useSession();
+  const [selectedColor, setSelectedColor] = React.useState<string>("");
 
   console.log("Session data:", session);
   return (
     <>
       <Header />
-      <main className="w-full h-full mx-auto">
-        <PixelCanvas pixelWidth={100} pixelHeight={100} />
+      <main className="w-full h-full mx-auto grid grid-cols-6 grid-rows-1 bg-gray-100">
+        <div className="col-span-1 flex justify-start items-center">
+          <PixelSelector onSelect={setSelectedColor} />
+        </div>
+        <div className="col-span-4 flex justify-center items-center">
+          <PixelCanvas
+            pixelWidth={100}
+            pixelHeight={100}
+            selectedColor={selectedColor}
+          />
+        </div>
+        <div className="col-span-1 flex justify-end items-center">
+          <PixelInformations />
+        </div>
       </main>
-      <PixelInformations />
     </>
   );
 };

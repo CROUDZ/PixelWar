@@ -5,7 +5,6 @@ import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import QRCode from "react-qr-code";
 
-
 const AdminPage: React.FC = () => {
   const { data: session, status } = useSession();
   console.log("AdminPage session:", session);
@@ -34,12 +33,10 @@ const AdminPage: React.FC = () => {
     }
   }, [status, session, router]);
 
-
-
   const handleVerify = async (e: React.FormEvent) => {
     if (!session?.user.id) return;
     e.preventDefault();
-    
+
     try {
       const res = await fetch("/api/2fa/verify", {
         method: "POST",
@@ -47,7 +44,7 @@ const AdminPage: React.FC = () => {
         body: JSON.stringify({ token, id: session.user.id }),
       });
       const data = await res.json();
-      
+
       if (data.success) {
         // Recharger la session pour refléter le changement de twoFA
         window.location.reload();
@@ -66,9 +63,13 @@ const AdminPage: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-6 text-center">Activer la 2FA</h1>
+          <h1 className="text-2xl font-bold mb-6 text-center">
+            Activer la 2FA
+          </h1>
           <div className="text-center mb-6">
-            <p className="mb-4">Scannez ce QR Code avec Google Authenticator :</p>
+            <p className="mb-4">
+              Scannez ce QR Code avec Google Authenticator :
+            </p>
             {otpAuthUrl ? (
               <div className="flex flex-col items-center">
                 <QRCode value={otpAuthUrl} size={200} className="mb-4" />
@@ -90,8 +91,8 @@ const AdminPage: React.FC = () => {
               maxLength={6}
               pattern="[0-9]{6}"
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
               disabled={token.length !== 6}
             >
@@ -125,7 +126,10 @@ const AdminPage: React.FC = () => {
                 Retour au Jeu
               </Link>
             </div>
-            <p>Ajouter un admin , indiquer son adresse email , attention il faut qu'il se connecte au moins une fois pour que son compte soit créé.</p>
+            <p>
+              Ajouter un admin , indiquer son adresse email , attention il faut
+              qu'il se connecte au moins une fois pour que son compte soit créé.
+            </p>
             <input
               type="text"
               value={admin}

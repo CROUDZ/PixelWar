@@ -32,6 +32,7 @@ export async function synchronize(data: {
   discordId: string;
   prismaUserId?: string; // nouvel argument optionnel : l'id prisma du user à mettre à jour
 }) {
+  console.log("[Synchronize] Starting synchronization for", data.discordId);
   const { refreshToken, accessToken: initialAccessToken, discordId } = data;
   let accessToken = initialAccessToken;
   let newRefreshToken = refreshToken;
@@ -86,6 +87,8 @@ export async function synchronize(data: {
   const guilds = await guildsResponse.json();
   const isInGuild = guilds.some((g: Guild) => g.id === guildId);
 
+  console.log("[Synchronize] User is in guild:", isInGuild);
+
   const guildMemberResponse = await fetch(
     `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
     {
@@ -108,7 +111,7 @@ export async function synchronize(data: {
     await prisma.user.update({
       where: { id: data.prismaUserId },
       data: {
-        // ne change pas l'id Prisma
+        name: profile.global_name || profile.username,
         username: profile.username,
         email: profile.email ?? undefined,
         image: profile.avatar
@@ -130,6 +133,7 @@ export async function synchronize(data: {
     await prisma.user.upsert({
       where: { email: profile.email },
       update: {
+        name: profile.global_name || profile.username,
         username: profile.username,
         image: profile.avatar
           ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
@@ -142,6 +146,7 @@ export async function synchronize(data: {
       },
       create: {
         id: discordId, // si tu veux absolument garder l'id discord, ok (optionnel)
+        name: profile.global_name || profile.username,
         username: profile.username,
         email: profile.email,
         image: profile.avatar
@@ -161,6 +166,7 @@ export async function synchronize(data: {
   await prisma.user.upsert({
     where: { id: discordId },
     update: {
+      name: profile.global_name || profile.username,
       username: profile.username,
       image: profile.avatar
         ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
@@ -172,6 +178,7 @@ export async function synchronize(data: {
       boosted,
     },
     create: {
+      name: profile.global_name || profile.username,
       id: discordId,
       username: profile.username,
       image: profile.avatar
