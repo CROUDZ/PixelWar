@@ -24,7 +24,9 @@ sub.on("message", (channel, message) => {
 
       const set = userSockets.get(String(userId));
       if (set && set.size > 0) {
-        console.log(`[server.js] sending logout to ${set.size} socket(s) for user ${userId}`);
+        console.log(
+          `[server.js] sending logout to ${set.size} socket(s) for user ${userId}`,
+        );
         for (const s of Array.from(set)) {
           try {
             if (s.readyState === s.OPEN || s.readyState === 1) {
@@ -47,10 +49,6 @@ sub.on("message", (channel, message) => {
     }
   }
 });
-
-
-
-
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
@@ -86,7 +84,9 @@ function addUserSocket(userId, ws) {
   }
   set.add(ws);
   ws.userId = userId;
-  console.log(`[server.js] addUserSocket: ${userId} -> now ${set.size} socket(s)`);
+  console.log(
+    `[server.js] addUserSocket: ${userId} -> now ${set.size} socket(s)`,
+  );
 }
 
 // helper pour retirer un ws (à la close)
@@ -96,7 +96,9 @@ function removeUserSocket(ws) {
   const set = userSockets.get(userId);
   if (!set) return;
   set.delete(ws);
-  console.log(`[server.js] removeUserSocket: ${userId} -> remaining ${set.size} socket(s)`);
+  console.log(
+    `[server.js] removeUserSocket: ${userId} -> remaining ${set.size} socket(s)`,
+  );
   if (set.size === 0) {
     userSockets.delete(userId);
     console.log(`[server.js] removed user mapping for ${userId}`);
