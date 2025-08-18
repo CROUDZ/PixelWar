@@ -2,7 +2,16 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import PixelCanvas from "./PixelCanvas";
-import { Eye, EyeOff, Settings, Upload, X, Move, RotateCcw, Maximize2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Settings,
+  Upload,
+  X,
+  Move,
+  RotateCcw,
+  Maximize2,
+} from "lucide-react";
 
 interface OverlayTransform {
   x: number;
@@ -17,7 +26,7 @@ interface PixelCanvasWithOverlayProps {
   pixelWidth?: number;
   pixelHeight?: number;
   selectedColor?: string;
-  
+
   // Props pour l'overlay
   overlaySrc?: string;
   overlayOpacity?: number;
@@ -49,7 +58,7 @@ export default function PixelCanvasWithOverlay({
   const [showControls, setShowControls] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  
+
   // États pour la transformation de l'overlay
   const [transform, setTransform] = useState<OverlayTransform>(
     overlayTransform || {
@@ -58,9 +67,9 @@ export default function PixelCanvasWithOverlay({
       width: 300,
       height: 300,
       rotation: 0,
-    }
+    },
   );
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
@@ -84,11 +93,14 @@ export default function PixelCanvasWithOverlay({
   }, [overlayTransform]);
 
   // Fonctions de transformation
-  const updateTransform = useCallback((newTransform: Partial<OverlayTransform>) => {
-    const updatedTransform = { ...transform, ...newTransform };
-    setTransform(updatedTransform);
-    onTransformChange?.(updatedTransform);
-  }, [transform, onTransformChange]);
+  const updateTransform = useCallback(
+    (newTransform: Partial<OverlayTransform>) => {
+      const updatedTransform = { ...transform, ...newTransform };
+      setTransform(updatedTransform);
+      onTransformChange?.(updatedTransform);
+    },
+    [transform, onTransformChange],
+  );
 
   // Fonctions de gestion
   const handleToggleOverlay = () => {
@@ -176,10 +188,10 @@ export default function PixelCanvasWithOverlay({
           pixelHeight={pixelHeight}
           selectedColor={selectedColor}
         />
-        
+
         {/* Overlay d'image transformable */}
         {localOverlaySrc && localShowOverlay && (
-          <div 
+          <div
             className="absolute pointer-events-none"
             style={{
               left: `${transform.x}px`,
@@ -187,7 +199,7 @@ export default function PixelCanvasWithOverlay({
               width: `${transform.width}px`,
               height: `${transform.height}px`,
               transform: `rotate(${transform.rotation}deg)`,
-              transformOrigin: 'center',
+              transformOrigin: "center",
               zIndex: 20,
             }}
           >
@@ -207,13 +219,15 @@ export default function PixelCanvasWithOverlay({
                 unoptimized={true}
                 draggable={false}
               />
-              
+
               {imageError && (
-                <div 
+                <div
                   className="absolute inset-0 flex items-center justify-center bg-red-100 border-2 border-red-300 rounded text-center pointer-events-none"
                   style={{ opacity: localOpacity }}
                 >
-                  <span className="text-red-600 text-xs">Erreur de chargement</span>
+                  <span className="text-red-600 text-xs">
+                    Erreur de chargement
+                  </span>
                 </div>
               )}
             </div>
@@ -233,7 +247,9 @@ export default function PixelCanvasWithOverlay({
                   ? "bg-blue-500 hover:bg-blue-600 text-white"
                   : "bg-gray-500 hover:bg-gray-600 text-white"
               }`}
-              title={localShowOverlay ? "Masquer l'overlay" : "Afficher l'overlay"}
+              title={
+                localShowOverlay ? "Masquer l'overlay" : "Afficher l'overlay"
+              }
             >
               {localShowOverlay ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
@@ -253,7 +269,9 @@ export default function PixelCanvasWithOverlay({
         {showControls && (
           <div className="absolute top-0 right-16 bg-white rounded-lg shadow-xl border p-4 min-w-[280px]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">Overlay de référence</h3>
+              <h3 className="font-semibold text-gray-800">
+                Overlay de référence
+              </h3>
               <button
                 onClick={() => setShowControls(false)}
                 className="p-1 hover:bg-gray-100 rounded"
@@ -318,25 +336,35 @@ export default function PixelCanvasWithOverlay({
             {/* Contrôles de transformation */}
             {localOverlaySrc && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Position et Taille</h4>
-                
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Position et Taille
+                </h4>
+
                 {/* Position */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">X</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      X
+                    </label>
                     <input
                       type="number"
                       value={Math.round(transform.x)}
-                      onChange={(e) => updateTransform({ x: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        updateTransform({ x: parseInt(e.target.value) || 0 })
+                      }
                       className="w-full p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Y</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Y
+                    </label>
                     <input
                       type="number"
                       value={Math.round(transform.y)}
-                      onChange={(e) => updateTransform({ y: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        updateTransform({ y: parseInt(e.target.value) || 0 })
+                      }
                       className="w-full p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
@@ -345,21 +373,33 @@ export default function PixelCanvasWithOverlay({
                 {/* Taille */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Largeur</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Largeur
+                    </label>
                     <input
                       type="number"
                       value={Math.round(transform.width)}
-                      onChange={(e) => updateTransform({ width: Math.max(50, parseInt(e.target.value) || 50) })}
+                      onChange={(e) =>
+                        updateTransform({
+                          width: Math.max(50, parseInt(e.target.value) || 50),
+                        })
+                      }
                       min="50"
                       className="w-full p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Hauteur</label>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Hauteur
+                    </label>
                     <input
                       type="number"
                       value={Math.round(transform.height)}
-                      onChange={(e) => updateTransform({ height: Math.max(50, parseInt(e.target.value) || 50) })}
+                      onChange={(e) =>
+                        updateTransform({
+                          height: Math.max(50, parseInt(e.target.value) || 50),
+                        })
+                      }
                       min="50"
                       className="w-full p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                     />
@@ -377,7 +417,9 @@ export default function PixelCanvasWithOverlay({
                     max="180"
                     step="15"
                     value={transform.rotation}
-                    onChange={(e) => updateTransform({ rotation: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      updateTransform({ rotation: parseInt(e.target.value) })
+                    }
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                   />
                 </div>
@@ -418,16 +460,16 @@ export default function PixelCanvasWithOverlay({
                       imageError
                         ? "bg-red-500"
                         : isImageLoaded
-                        ? "bg-green-500"
-                        : "bg-yellow-500"
+                          ? "bg-green-500"
+                          : "bg-yellow-500"
                     }`}
                   />
                   <span>
                     {imageError
                       ? "Erreur de chargement"
                       : isImageLoaded
-                      ? "Image chargée"
-                      : "Chargement..."}
+                        ? "Image chargée"
+                        : "Chargement..."}
                   </span>
                 </div>
               </div>

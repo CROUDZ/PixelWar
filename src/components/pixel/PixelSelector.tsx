@@ -19,7 +19,6 @@ const nesPalette = [
   "#FCFC00",
 ];
 
-
 interface PixelSelectorProps {
   onSelect: (color: string) => void;
   valide?: boolean;

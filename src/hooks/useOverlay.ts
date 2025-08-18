@@ -21,7 +21,7 @@ export interface UseOverlayReturn {
   overlayOpacity: number;
   showOverlay: boolean;
   overlayTransform: OverlayTransform;
-  
+
   // Actions
   setOverlaySrc: (src: string) => void;
   setOverlayOpacity: (opacity: number) => void;
@@ -30,7 +30,7 @@ export interface UseOverlayReturn {
   toggleOverlay: () => void;
   resetOverlay: () => void;
   resetTransform: () => void;
-  
+
   // Configurations rapides
   loadOverlay: (src: string, opacity?: number, show?: boolean) => void;
 }
@@ -61,10 +61,11 @@ export function useOverlay(options: UseOverlayOptions = {}): UseOverlayReturn {
   const [overlaySrc, setOverlaySrc] = useState(initialSrc);
   const [overlayOpacity, setOverlayOpacity] = useState(initialOpacity);
   const [showOverlay, setShowOverlay] = useState(initialShow);
-  const [overlayTransform, setOverlayTransform] = useState<OverlayTransform>(initialTransform);
+  const [overlayTransform, setOverlayTransform] =
+    useState<OverlayTransform>(initialTransform);
 
   const toggleOverlay = useCallback(() => {
-    setShowOverlay(prev => !prev);
+    setShowOverlay((prev) => !prev);
   }, []);
 
   const resetOverlay = useCallback(() => {
@@ -78,16 +79,15 @@ export function useOverlay(options: UseOverlayOptions = {}): UseOverlayReturn {
     setOverlayTransform(defaultTransform);
   }, []);
 
-  const loadOverlay = useCallback((
-    src: string, 
-    opacity: number = 0.5, 
-    show: boolean = true
-  ) => {
-    setOverlaySrc(src);
-    setOverlayOpacity(opacity);
-    setShowOverlay(show);
-    // Garder la transformation actuelle ou réinitialiser selon les besoins
-  }, []);
+  const loadOverlay = useCallback(
+    (src: string, opacity: number = 0.5, show: boolean = true) => {
+      setOverlaySrc(src);
+      setOverlayOpacity(opacity);
+      setShowOverlay(show);
+      // Garder la transformation actuelle ou réinitialiser selon les besoins
+    },
+    [],
+  );
 
   return {
     overlaySrc,
@@ -122,7 +122,7 @@ export function useOverlay(options: UseOverlayOptions = {}): UseOverlayReturn {
 // Exemple 3: Dans un composant
 // function MyComponent() {
 //   const overlay = useOverlay();
-//   
+//
 //   return (
 //     <PixelCanvasWithOverlay
 //       overlaySrc={overlay.overlaySrc}

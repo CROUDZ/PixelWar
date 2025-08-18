@@ -16,12 +16,12 @@ export default function ExamplePixelWarPage() {
   const exampleImages = [
     {
       name: "Logo exemple",
-      url: "https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO"
+      url: "https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO",
     },
     {
-      name: "Pattern exemple", 
-      url: "https://via.placeholder.com/100x100/00FF00/000000?text=PATTERN"
-    }
+      name: "Pattern exemple",
+      url: "https://via.placeholder.com/100x100/00FF00/000000?text=PATTERN",
+    },
   ];
 
   return (
@@ -32,7 +32,7 @@ export default function ExamplePixelWarPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             PixelWar - Avec Overlay
           </h1>
-          
+
           {/* Sélecteur de couleur */}
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -51,7 +51,6 @@ export default function ExamplePixelWarPage() {
       {/* Contenu principal */}
       <main className="max-w-7xl mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
           {/* Canvas avec overlay */}
           <div className="lg:col-span-3">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -60,10 +59,11 @@ export default function ExamplePixelWarPage() {
                   Canvas de dessin
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Utilisez le bouton paramètres pour ajouter un overlay de référence
+                  Utilisez le bouton paramètres pour ajouter un overlay de
+                  référence
                 </p>
               </div>
-              
+
               <div className="relative">
                 <PixelCanvasWithOverlay
                   pixelWidth={100}
@@ -82,7 +82,6 @@ export default function ExamplePixelWarPage() {
 
           {/* Panneau de contrôles et informations */}
           <div className="space-y-6">
-            
             {/* Informations */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -90,19 +89,25 @@ export default function ExamplePixelWarPage() {
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Overlay actif:</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Overlay actif:
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {overlayVisible ? "Oui" : "Non"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Opacité:</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Opacité:
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {Math.round(overlayOpacity * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Image:</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Image:
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {overlayImage ? "✓" : "✗"}
                   </span>

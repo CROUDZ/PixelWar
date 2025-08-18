@@ -266,7 +266,7 @@ export default function PixelCanvas({
         ws.removeEventListener("message", onMessage);
       } catch {}
     };
-  }, [canvasDisplaySize.width, dimensions.width, redrawCanvas]);
+  }, [canvasDisplaySize.width, canvasDisplaySize.height, dimensions.width, totalPixels, redrawCanvas]);
 
   // Sizing et event setup (inchangé en partie)
   useEffect(() => {
@@ -344,6 +344,52 @@ export default function PixelCanvas({
       if (ctx) ctxRef.current = ctx;
     }
   }, [canvasDisplaySize]);
+
+  const placeAdminBlock = useCallback(
+    (x: number, y: number, width: number, height: number, color: string) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        console.warn("[ADMIN] Socket not open");
+        return;
+      }
+
+      // Placement optimiste local
+      if (!gridRef.current) {
+        gridRef.current = new Array(dimensions.width * dimensions.height).fill(
+          "#FFFFFF",
+        );
+      }
+
+      for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+          const px = x + dx;
+          const py = y + dy;
+          if (
+            px >= 0 &&
+            px < dimensions.width &&
+            py >= 0 &&
+            py < dimensions.height
+          ) {
+            gridRef.current[py * dimensions.width + px] = color.toUpperCase();
+
+            // Envoyer chaque pixel individuellement au serveur
+            const payload = {
+              type: "placePixel",
+              x: px,
+              y: py,
+              color: color,
+              userId,
+              isAdmin: true,
+            };
+            socket.send(JSON.stringify(payload));
+          }
+        }
+      }
+
+      redrawCanvas();
+    },
+    [dimensions, userId, redrawCanvas],
+  );
 
   useEffect(() => {
     const id = requestAnimationFrame(() => redrawCanvas());
@@ -429,6 +475,7 @@ export default function PixelCanvas({
       adminColor,
       dimensions,
       screenToGrid,
+      placeAdminBlock,
     ],
   );
 
@@ -498,51 +545,7 @@ export default function PixelCanvas({
     ],
   );
 
-  const placeAdminBlock = useCallback(
-    (x: number, y: number, width: number, height: number, color: string) => {
-      const socket = socketRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) {
-        console.warn("[ADMIN] Socket not open");
-        return;
-      }
-
-      // Placement optimiste local
-      if (!gridRef.current) {
-        gridRef.current = new Array(dimensions.width * dimensions.height).fill(
-          "#FFFFFF",
-        );
-      }
-
-      for (let dy = 0; dy < height; dy++) {
-        for (let dx = 0; dx < width; dx++) {
-          const px = x + dx;
-          const py = y + dy;
-          if (
-            px >= 0 &&
-            px < dimensions.width &&
-            py >= 0 &&
-            py < dimensions.height
-          ) {
-            gridRef.current[py * dimensions.width + px] = color.toUpperCase();
-
-            // Envoyer chaque pixel individuellement au serveur
-            const payload = {
-              type: "placePixel",
-              x: px,
-              y: py,
-              color: color,
-              userId,
-              isAdmin: true,
-            };
-            socket.send(JSON.stringify(payload));
-          }
-        }
-      }
-
-      redrawCanvas();
-    },
-    [dimensions, userId, redrawCanvas],
-  );
+  
 
   // Gestion des événements souris normaux
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
