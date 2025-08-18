@@ -35,23 +35,25 @@ export default async function handler(
     }
 
     if (!user.accessToken || !user.refreshToken) {
-      return res.status(400).json({ 
-        error: "Tokens Discord manquants. Veuillez vous reconnecter." 
+      return res.status(400).json({
+        error: "Tokens Discord manquants. Veuillez vous reconnecter.",
       });
     }
 
     // Vérifier le cooldown de 10 minutes
     const now = new Date();
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
-    
+
     if (user.lastSyncAt && user.lastSyncAt > tenMinutesAgo) {
-      const remainingTime = Math.ceil((user.lastSyncAt.getTime() + 10 * 60 * 1000 - now.getTime()) / 1000);
+      const remainingTime = Math.ceil(
+        (user.lastSyncAt.getTime() + 10 * 60 * 1000 - now.getTime()) / 1000,
+      );
       const minutes = Math.floor(remainingTime / 60);
       const seconds = remainingTime % 60;
-      
-      return res.status(429).json({ 
+
+      return res.status(429).json({
         error: `Cooldown actif. Attendez encore ${minutes}m ${seconds}s`,
-        remainingSeconds: remainingTime
+        remainingSeconds: remainingTime,
       });
     }
 
@@ -69,16 +71,15 @@ export default async function handler(
       data: { lastSyncAt: now },
     });
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: "Synchronisation réussie",
-      nextSyncAvailable: new Date(now.getTime() + 10 * 60 * 1000)
+      nextSyncAvailable: new Date(now.getTime() + 10 * 60 * 1000),
     });
-
   } catch (error) {
     console.error("Erreur lors de la synchronisation:", error);
-    return res.status(500).json({ 
-      error: "Erreur lors de la synchronisation" 
+    return res.status(500).json({
+      error: "Erreur lors de la synchronisation",
     });
   }
 }

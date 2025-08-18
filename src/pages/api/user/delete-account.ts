@@ -22,8 +22,8 @@ export default async function handler(
 
     // Vérifier que l'utilisateur a bien confirmé la suppression
     if (confirmation !== "DELETE_ACCOUNT") {
-      return res.status(400).json({ 
-        error: "Confirmation de suppression requise" 
+      return res.status(400).json({
+        error: "Confirmation de suppression requise",
       });
     }
 
@@ -37,14 +37,14 @@ export default async function handler(
       where: { id: session.user.id },
     });
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "Compte supprimé avec succès" 
+    return res.status(200).json({
+      success: true,
+      message: "Compte supprimé avec succès",
     });
   } catch (error) {
     console.error("Erreur lors de la suppression du compte:", error);
-    return res.status(500).json({ 
-      error: "Erreur interne du serveur" 
+    return res.status(500).json({
+      error: "Erreur interne du serveur",
     });
   }
 }

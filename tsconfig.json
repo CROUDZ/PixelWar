@@ -29,7 +29,9 @@
     ".next/types/**/*.ts",
     "scripts/test-prisma.js",
     "src/lib/prisma.js",
-    "src/lib/prisma.js"
+    "src/lib/prisma.js",
+    "ws-server/pixel-canvas.js",
+    "ws-server/persistence-redis.js"
   ],
   "exclude": ["node_modules"]
 }

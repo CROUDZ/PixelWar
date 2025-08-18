@@ -1,23 +1,24 @@
 import React, { useState } from "react";
 
 const nesPalette = [
-  "#000000",
-  "#9D9D9D",
-  "#FFFFFF",
-  "#BE2633",
-  "#E06F8B",
-  "#493C2B",
-  "#A46422",
-  "#EB8931",
-  "#F7E26B",
-  "#2F484E",
-  "#44891A",
-  "#A3CE27",
-  "#1B2632",
-  "#005784",
-  "#8A2BE2", // Violet
-  "#B2DCEF",
+  "#7C7C7C",
+  "#0000FC",
+  "#0000BC",
+  "#4428BC",
+  "#940084",
+  "#A80020",
+  "#A81000",
+  "#881400",
+  "#503000",
+  "#007800",
+  "#006800",
+  "#005800",
+  "#004058",
+  "#BCBCBC",
+  "#F8F8F8",
+  "#FCFC00",
 ];
+
 
 interface PixelSelectorProps {
   onSelect: (color: string) => void;

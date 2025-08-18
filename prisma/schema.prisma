@@ -56,6 +56,7 @@ model User {
   twoFASecret     String?
   lastPixelPlaced DateTime?
   lastSyncAt      DateTime? // Nouveau champ pour le cooldown de synchronisation
+  banned          Boolean       @default(false)
   accounts        Account[]
   sessions        Session[]
   pixelActions    PixelAction[]
@@ -80,4 +81,14 @@ model PixelAction {
 enum Role {
   USER
   ADMIN
+}
+
+model EventMode {
+  id        String   @id @default(cuid())
+  name      String   @unique @default("eventMode")
+  startDate DateTime
+  endDate   DateTime
+  active    Boolean  @default(false)
+
+  //@@map("event_mode")
 }

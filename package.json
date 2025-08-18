@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "format": "prettier --write .",
+    "f": "prettier --write .",
     "clean": "rm -rf dist .next node_modules",
     "build": "next build",
     "start": "next start",
@@ -19,7 +19,7 @@
     "bot:build": "rimraf bot/dist && tsc -p bot/tsconfig.bot.json && tsc-alias -p bot/tsconfig.bot.json && npm run bot:minify",
     "bot:minify": "find bot/dist -type f -name '*.js' -exec terser --compress --mangle --module -o {} {} \\;",
     "bot:dev": "npm run bot:build && NODE_TLS_REJECT_UNAUTHORIZED=0 node bot/dist/index.js",
-    "bot:start": "clear && NODE_ENV=production node bot/dist/index.js ",
+    "bot": "clear && NODE_ENV=production node bot/dist/index.js ",
     "bot:clean": "rimraf bot/dist && clear",
     "register:commands": "ts-node bot/dist/Loader/registerCommands.js"
   },
@@ -37,6 +37,7 @@
     "next": "15.3.4",
     "next-auth": "^4.24.11",
     "prettier": "^3.6.2",
+    "puppeteer": "^24.16.2",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useSession, signOut } from "next-auth/react";
+import { useEventMode } from "@/context/EventMode";
 import { openInPopup } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   Menu,
   X,
@@ -24,6 +25,10 @@ import {
   CheckCircle,
   Trash2,
   RefreshCw,
+  Clock,
+  Play,
+  Pause,
+  Calendar,
 } from "lucide-react";
 
 interface NavItem {
@@ -37,6 +42,7 @@ interface NavItem {
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { data: session, status } = useSession();
+  const { isActive, startTime, endTime } = useEventMode();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -45,6 +51,10 @@ const Header: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [deleteStep, setDeleteStep] = useState(0); // 0: initial, 1: typing, 2: final confirm
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [eventStatus, setEventStatus] = useState<
+    "active" | "suspended" | "ended" | "upcoming"
+  >("suspended");
 
   const navItems: NavItem[] = [
     {
@@ -94,7 +104,7 @@ const Header: React.FC = () => {
   const handleSync = async () => {
     setIsSyncing(true);
     setSyncMessage("");
-    
+
     try {
       const response = await fetch("/api/user/sync", {
         method: "POST",
@@ -102,9 +112,9 @@ const Header: React.FC = () => {
           "Content-Type": "application/json",
         },
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         setSyncMessage("✅ Synchronisation réussie !");
         // Recharger la session pour mettre à jour les données
@@ -126,7 +136,7 @@ const Header: React.FC = () => {
   // Fonction de suppression de compte
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
-    
+
     try {
       const response = await fetch("/api/user/delete-account", {
         method: "DELETE",
@@ -134,10 +144,10 @@ const Header: React.FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          confirmation: "DELETE_ACCOUNT"
+          confirmation: "DELETE_ACCOUNT",
         }),
       });
-      
+
       if (response.ok) {
         // Déconnexion et redirection
         await signOut({ callbackUrl: "/" });
@@ -145,7 +155,7 @@ const Header: React.FC = () => {
         const data = await response.json();
         alert(data.error || "Erreur lors de la suppression");
       }
-    } catch  {
+    } catch {
       alert("Erreur de connexion");
     } finally {
       setIsDeleting(false);
@@ -154,13 +164,105 @@ const Header: React.FC = () => {
     }
   };
 
+  // Event timer logic
+  useEffect(() => {
+    const updateEventStatus = () => {
+      const now = new Date();
+
+      if (!isActive) {
+        setEventStatus("suspended");
+        setTimeRemaining("");
+        return;
+      }
+
+      if (startTime && endTime) {
+        if (now < startTime) {
+          setEventStatus("upcoming");
+          const diff = startTime.getTime() - now.getTime();
+          setTimeRemaining(formatTimeRemaining(diff));
+        } else if (now >= startTime && now <= endTime) {
+          setEventStatus("active");
+          const diff = endTime.getTime() - now.getTime();
+          setTimeRemaining(formatTimeRemaining(diff));
+        } else {
+          setEventStatus("ended");
+          setTimeRemaining("");
+        }
+      }
+    };
+
+    const formatTimeRemaining = (ms: number) => {
+      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+
+      if (days > 0) return `${days}j ${hours}h ${minutes}m`;
+      if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+      if (minutes > 0) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    };
+
+    updateEventStatus();
+    const interval = setInterval(updateEventStatus, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActive, startTime, endTime]);
+
+  const getEventStatusConfig = () => {
+    switch (eventStatus) {
+      case "active":
+        return {
+          icon: <Play size={14} className="text-green-500" />,
+          text: "Event en cours",
+          subtext: `Fin dans ${timeRemaining}`,
+          bgColor: "bg-green-50 dark:bg-green-950/20",
+          borderColor: "border-green-200 dark:border-green-800",
+          textColor: "text-green-700 dark:text-green-300",
+          pulse: true,
+        };
+      case "suspended":
+        return {
+          icon: <Pause size={14} className="text-orange-500" />,
+          text: "Event suspendu",
+          subtext: "En attente d'activation",
+          bgColor: "bg-orange-50 dark:bg-orange-950/20",
+          borderColor: "border-orange-200 dark:border-orange-800",
+          textColor: "text-orange-700 dark:text-orange-300",
+          pulse: false,
+        };
+      case "ended":
+        return {
+          icon: <Clock size={14} className="text-red-500" />,
+          text: "Event terminé",
+          subtext: "Merci d'avoir participé !",
+          bgColor: "bg-red-50 dark:bg-red-950/20",
+          borderColor: "border-red-200 dark:border-red-800",
+          textColor: "text-red-700 dark:text-red-300",
+          pulse: false,
+        };
+      case "upcoming":
+        return {
+          icon: <Calendar size={14} className="text-blue-500" />,
+          text: "Event à venir",
+          subtext: `Début dans ${timeRemaining}`,
+          bgColor: "bg-blue-50 dark:bg-blue-950/20",
+          borderColor: "border-blue-200 dark:border-blue-800",
+          textColor: "text-blue-700 dark:text-blue-300",
+          pulse: false,
+        };
+    }
+  };
+
+  const statusConfig = getEventStatusConfig();
+
   const filteredNavItems = navItems.filter(
     (item) => !item.admin || session?.user?.role === "ADMIN",
   );
 
   return (
     <>
-      <motion.header
+      <m.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -173,7 +275,7 @@ const Header: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo et titre */}
-            <motion.div
+            <m.div
               className="flex items-center space-x-3"
               whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 400 }}
@@ -191,12 +293,43 @@ const Header: React.FC = () => {
               <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-text to-accent-600 bg-clip-text text-transparent">
                 PixelWar
               </h1>
-            </motion.div>
+            </m.div>
+
+            {/* Event Status Display */}
+            <m.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className={`hidden md:flex items-center space-x-2 px-3 py-2 rounded-lg border ${statusConfig.bgColor} ${statusConfig.borderColor} shadow-sm`}
+            >
+              <div
+                className={`flex items-center space-x-1 ${statusConfig.pulse ? "animate-pulse" : ""}`}
+              >
+                {statusConfig.icon}
+                <span
+                  className={`text-sm font-medium ${statusConfig.textColor}`}
+                >
+                  {statusConfig.text}
+                </span>
+              </div>
+              {statusConfig.subtext && (
+                <>
+                  <div
+                    className={`w-1 h-1 rounded-full ${statusConfig.textColor.replace("text-", "bg-")}`}
+                  ></div>
+                  <span
+                    className={`text-xs ${statusConfig.textColor} opacity-75`}
+                  >
+                    {statusConfig.subtext}
+                  </span>
+                </>
+              )}
+            </m.div>
 
             {/* Navigation desktop */}
             <nav className="hidden md:flex items-center space-x-1">
               {filteredNavItems.map((item) => (
-                <motion.div
+                <m.div
                   key={item.name}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -211,14 +344,14 @@ const Header: React.FC = () => {
                     </span>
                     <span className="font-medium">{item.name}</span>
                   </Link>
-                </motion.div>
+                </m.div>
               ))}
             </nav>
 
             {/* Actions (theme + auth) */}
             <div className="flex items-center space-x-3">
               {/* Toggle theme */}
-              <motion.button
+              <m.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={toggleTheme}
@@ -227,7 +360,7 @@ const Header: React.FC = () => {
               >
                 <AnimatePresence mode="wait">
                   {theme === "dark" ? (
-                    <motion.div
+                    <m.div
                       key="moon"
                       initial={{ rotate: -90, opacity: 0 }}
                       animate={{ rotate: 0, opacity: 1 }}
@@ -235,9 +368,9 @@ const Header: React.FC = () => {
                       transition={{ duration: 0.2 }}
                     >
                       <Moon size={18} className="text-accent-600" />
-                    </motion.div>
+                    </m.div>
                   ) : (
-                    <motion.div
+                    <m.div
                       key="sun"
                       initial={{ rotate: 90, opacity: 0 }}
                       animate={{ rotate: 0, opacity: 1 }}
@@ -245,10 +378,10 @@ const Header: React.FC = () => {
                       transition={{ duration: 0.2 }}
                     >
                       <Sun size={18} className="text-accent-600" />
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
-              </motion.button>
+              </m.button>
 
               {/* Auth section */}
               {status === "loading" ? (
@@ -258,7 +391,7 @@ const Header: React.FC = () => {
                 </div>
               ) : session ? (
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <motion.button
+                  <m.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -286,11 +419,11 @@ const Header: React.FC = () => {
                         showUserMenu ? "rotate-180" : ""
                       }`}
                     />
-                  </motion.button>
+                  </m.button>
 
                   <AnimatePresence>
                     {showUserMenu && (
-                      <motion.div
+                      <m.div
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -433,15 +566,17 @@ const Header: React.FC = () => {
                             disabled={isSyncing}
                             className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <RefreshCw 
-                              size={16} 
-                              className={isSyncing ? "animate-spin" : ""} 
+                            <RefreshCw
+                              size={16}
+                              className={isSyncing ? "animate-spin" : ""}
                             />
                             <span>
-                              {isSyncing ? "Synchronisation..." : "Synchroniser Discord"}
+                              {isSyncing
+                                ? "Synchronisation..."
+                                : "Synchroniser Discord"}
                             </span>
                           </button>
-                          
+
                           {/* Sync message */}
                           {syncMessage && (
                             <div className="px-3 py-2 text-xs text-center rounded-lg bg-surface">
@@ -471,7 +606,7 @@ const Header: React.FC = () => {
                         {/* Delete confirmation modal */}
                         <AnimatePresence>
                           {showDeleteConfirm && (
-                            <motion.div
+                            <m.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               exit={{ opacity: 0 }}
@@ -481,7 +616,7 @@ const Header: React.FC = () => {
                                 setDeleteStep(0);
                               }}
                             >
-                              <motion.div
+                              <m.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
@@ -490,7 +625,10 @@ const Header: React.FC = () => {
                               >
                                 <div className="flex items-center space-x-3 mb-4">
                                   <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/20 flex items-center justify-center">
-                                    <Trash2 size={20} className="text-red-600" />
+                                    <Trash2
+                                      size={20}
+                                      className="text-red-600"
+                                    />
                                   </div>
                                   <div>
                                     <h3 className="font-semibold text-lg">
@@ -509,12 +647,20 @@ const Header: React.FC = () => {
                                         ⚠️ Attention
                                       </h4>
                                       <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                                        <li>• Tous vos pixels seront supprimés</li>
-                                        <li>• Votre compte sera définitivement effacé</li>
-                                        <li>• Cette action ne peut pas être annulée</li>
+                                        <li>
+                                          • Tous vos pixels seront supprimés
+                                        </li>
+                                        <li>
+                                          • Votre compte sera définitivement
+                                          effacé
+                                        </li>
+                                        <li>
+                                          • Cette action ne peut pas être
+                                          annulée
+                                        </li>
                                       </ul>
                                     </div>
-                                    
+
                                     <div className="flex space-x-3">
                                       <button
                                         onClick={() => {
@@ -538,7 +684,8 @@ const Header: React.FC = () => {
                                 {deleteStep === 1 && (
                                   <div className="space-y-4">
                                     <p className="text-sm">
-                                      Tapez <strong>"SUPPRIMER"</strong> pour confirmer :
+                                      Tapez <strong>"SUPPRIMER"</strong> pour
+                                      confirmer :
                                     </p>
                                     <input
                                       type="text"
@@ -567,8 +714,9 @@ const Header: React.FC = () => {
                                       🚨 Dernière confirmation
                                     </p>
                                     <p className="text-sm">
-                                      Êtes-vous absolument certain(e) de vouloir supprimer votre compte ?
-                                      Cette action est irréversible.
+                                      Êtes-vous absolument certain(e) de vouloir
+                                      supprimer votre compte ? Cette action est
+                                      irréversible.
                                     </p>
                                     <div className="flex space-x-3">
                                       <button
@@ -582,21 +730,23 @@ const Header: React.FC = () => {
                                         disabled={isDeleting}
                                         className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        {isDeleting ? "Suppression..." : "Supprimer définitivement"}
+                                        {isDeleting
+                                          ? "Suppression..."
+                                          : "Supprimer définitivement"}
                                       </button>
                                     </div>
                                   </div>
                                 )}
-                              </motion.div>
-                            </motion.div>
+                              </m.div>
+                            </m.div>
                           )}
                         </AnimatePresence>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </div>
               ) : (
-                <motion.button
+                <m.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() =>
@@ -605,11 +755,11 @@ const Header: React.FC = () => {
                   className="px-4 py-2 rounded-lg bg-accent-600 hover:to-accent-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Connexion
-                </motion.button>
+                </m.button>
               )}
 
               {/* Menu mobile button */}
-              <motion.button
+              <m.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={(e) => {
@@ -620,7 +770,7 @@ const Header: React.FC = () => {
               >
                 <AnimatePresence mode="wait">
                   {isMobileMenuOpen ? (
-                    <motion.div
+                    <m.div
                       key="close"
                       initial={{ rotate: -90, opacity: 0 }}
                       animate={{ rotate: 0, opacity: 1 }}
@@ -628,9 +778,9 @@ const Header: React.FC = () => {
                       transition={{ duration: 0.2 }}
                     >
                       <X size={20} />
-                    </motion.div>
+                    </m.div>
                   ) : (
-                    <motion.div
+                    <m.div
                       key="menu"
                       initial={{ rotate: 90, opacity: 0 }}
                       animate={{ rotate: 0, opacity: 1 }}
@@ -638,21 +788,21 @@ const Header: React.FC = () => {
                       transition={{ duration: 0.2 }}
                     >
                       <Menu size={20} />
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
-              </motion.button>
+              </m.button>
             </div>
           </div>
         </div>
-      </motion.header>
+      </m.header>
 
       {/* Menu mobile */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
             {/* Overlay */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -662,7 +812,7 @@ const Header: React.FC = () => {
             />
 
             {/* Menu panel */}
-            <motion.div
+            <m.div
               initial={{ x: "100%", opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
@@ -671,7 +821,7 @@ const Header: React.FC = () => {
             >
               <nav className="p-4 space-y-2">
                 {filteredNavItems.map((item, index) => (
-                  <motion.div
+                  <m.div
                     key={item.name}
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -688,10 +838,10 @@ const Header: React.FC = () => {
                       </span>
                       <span className="font-medium">{item.name}</span>
                     </Link>
-                  </motion.div>
+                  </m.div>
                 ))}
               </nav>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

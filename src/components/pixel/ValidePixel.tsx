@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PixelSelector from "./PixelSelector";
 import { useSession } from "next-auth/react";
+import { useEventMode } from "@/context/EventMode";
 import { openInPopup } from "@/lib/utils";
 
 interface ValidePixelProps {
@@ -28,9 +29,23 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   const [remainingTime, setRemainingTime] = useState(0);
 
   const { data: session, status } = useSession();
+  const { isActive, startTime, endTime } = useEventMode();
+
+  // Vérifie si l'événement est actif et dans la plage horaire
+  const isEventAccessible = () => {
+    if (session?.user?.role === "ADMIN") return true; // Les admins contournent les restrictions
+    if (!isActive) return false; // L'événement n'est pas actif
+    const now = new Date();
+    return startTime && endTime && now >= startTime && now <= endTime; // Vérifie la plage horaire
+  };
 
   // Calcul du cooldown restant
   useEffect(() => {
+    if (session?.user?.role === "ADMIN") {
+      setRemainingTime(0); // Désactive le cooldown pour les admins
+      return;
+    }
+
     if (!session?.user?.lastPixelPlaced) {
       setRemainingTime(0);
       return;
@@ -69,7 +84,8 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
       openInPopup("http://localhost:3000/link");
     }
 
-    if (remainingTime > 0) return; // on bloque si cooldown actif
+    if (!isEventAccessible()) return; // Bloquer si l'événement n'est pas accessible
+    if (session?.user?.role !== "ADMIN" && remainingTime > 0) return; // Bloquer si le cooldown est actif et que l'utilisateur n'est pas admin
 
     onValidate(x, y, color);
   };
@@ -77,6 +93,12 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   return (
     <div className="border border-gray-300 p-4 rounded-md w-72">
       <h3 className="text-lg font-semibold mb-4">Validate Pixel</h3>
+      {!isEventAccessible() && session?.user?.role !== "ADMIN" && (
+        <p className="text-sm text-red-500 mb-2">
+          L'événement est actuellement inactif ou hors des délais. Vous ne
+          pouvez pas modifier la toile.
+        </p>
+      )}
       <div className="mb-3">
         <label className="block text-sm font-medium">
           X Coordinate:
@@ -85,6 +107,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
             value={x}
             onChange={(e) => setX(Number(e.target.value))}
             className="ml-2 border border-gray-300 rounded px-2 py-1"
+            disabled={!isEventAccessible()}
           />
         </label>
       </div>
@@ -96,6 +119,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
             value={y}
             onChange={(e) => setY(Number(e.target.value))}
             className="ml-2 border border-gray-300 rounded px-2 py-1"
+            disabled={!isEventAccessible()}
           />
         </label>
       </div>
@@ -105,18 +129,22 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
           <PixelSelector onSelect={setColor} valide={true} />
         </label>
       </div>
-      {session?.user?.linked && remainingTime > 0 && (
-        <p className="text-sm text-red-500 mb-2">
-          Vous devez attendre {remainingTime} seconde
-          {remainingTime > 1 ? "s" : ""} avant de placer un pixel.
-        </p>
-      )}
+      {session?.user?.linked &&
+        session?.user?.role !== "ADMIN" &&
+        remainingTime > 0 && (
+          <p className="text-sm text-red-500 mb-2">
+            Vous devez attendre {remainingTime} seconde
+            {remainingTime > 1 ? "s" : ""} avant de placer un pixel.
+          </p>
+        )}
       <div className="mt-4 flex space-x-2">
         <button
           onClick={handleValidate}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
           disabled={
-            status === "loading" || (session?.user?.linked && remainingTime > 0)
+            status === "loading" ||
+            !isEventAccessible() ||
+            (session?.user?.linked && remainingTime > 0)
           }
         >
           Valider

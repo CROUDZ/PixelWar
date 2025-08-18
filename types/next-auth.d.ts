@@ -24,6 +24,7 @@ declare module "next-auth" {
       linked?: boolean;
       role?: "USER" | "ADMIN"; // ensure role is always present
       twoFA?: boolean;
+      banned?: boolean; // ensure banned is always present
     } & DefaultSession["user"];
   }
 }

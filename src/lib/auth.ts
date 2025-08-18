@@ -13,6 +13,7 @@ import { synchronize } from "@/lib/synchronize"; // nouvelle signature acceptant
 import type { JWT } from "next-auth/jwt";
 import type { DiscordProfile } from "@/types/discord"; // Assurez-vous que ce type est défini dans votre projet
 import addUserToGuild from "@/lib/addUserToGuild"; // Import de la fonction pour ajouter l'utilisateur au serveur
+import { logToDiscord } from "../../bot/dist/index.js"; // Assurez-vous que le chemin est correct
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -78,6 +79,7 @@ export const authOptions: NextAuthOptions = {
             linked: true,
             role: true,
             twoFA: true,
+            banned: true,
           },
         });
 
@@ -90,12 +92,14 @@ export const authOptions: NextAuthOptions = {
               ? dbUser.role
               : "USER";
           session.user.twoFA = !!dbUser.twoFA;
+          session.user.banned = dbUser.banned ?? false; // Assurez-vous que le champ banned est dans votre modèle User
         }
       }
       return session;
     },
     async signIn({ account, profile }) {
       if (account?.access_token && profile) {
+        
         try {
           await addUserToGuild(
             account.access_token,
@@ -155,6 +159,12 @@ export const authOptions: NextAuthOptions = {
               scope: account.scope,
             },
           });
+                logToDiscord(
+        `L'utilisateur ${discordProfile.username} (${discordProfile.id}) s'est connecté.`,
+      );
+      console.log(
+        `[auth.ts] signIn: User ${discordProfile.username} (${discordProfile.id}) signed in.`,
+      );
         } catch (error) {
           console.error(
             "Erreur lors de l'ajout de l'utilisateur au serveur Discord:",
