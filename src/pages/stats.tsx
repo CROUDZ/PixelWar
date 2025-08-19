@@ -5,7 +5,7 @@ const Header = dynamic(() => import("../components/Header"), {
   ssr: false,
 });
 
-const PixelInfo = dynamic(() => import("../components/pixel/PixelInfo"), {
+const PixelInfo = dynamic(() => import("../components/infos/PixelInfo"), {
   ssr: false,
 });
 

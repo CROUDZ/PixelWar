@@ -220,7 +220,7 @@ export const logToDiscord: LogToDiscord = async function (
 ) {
   // Récupérer le client Discord depuis les globals
   const client = global.discordClient;
-  
+
   if (!client) {
     console.error("[Logger] Client Discord non disponible");
     return;
@@ -254,40 +254,43 @@ interface LogRequestBody {
 }
 
 // Route POST pour envoyer des logs
-loggerRouter.post("/", async (req: Request & { body: LogRequestBody }, res: Response) => {
-  const { message, status = "info" } = req.body;
+loggerRouter.post(
+  "/",
+  async (req: Request & { body: LogRequestBody }, res: Response) => {
+    const { message, status = "info" } = req.body;
 
-  if (!message) {
-    return res.status(400).json({
-      error: "Le champ 'message' est requis",
+    if (!message) {
+      return res.status(400).json({
+        error: "Le champ 'message' est requis",
+      });
+    }
+
+    // Valider le status
+    const validStatuses = ["info", "warning", "error", "erreur"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Status invalide. Valeurs autorisées: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    await logToDiscord(message, status);
+
+    return res.status(200).json({
+      success: true,
+      message: "Log envoyé avec succès",
+      data: {
+        message,
+        status,
+        timestamp: new Date().toISOString(),
+      },
     });
-  }
-
-  // Valider le status
-  const validStatuses = ["info", "warning", "error", "erreur"];
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({
-      error: `Status invalide. Valeurs autorisées: ${validStatuses.join(", ")}`,
-    });
-  }
-
-  await logToDiscord(message, status);
-
-  return res.status(200).json({
-    success: true,
-    message: "Log envoyé avec succès",
-    data: {
-      message,
-      status,
-      timestamp: new Date().toISOString(),
-    },
-  });
-});
+  },
+);
 
 // Route GET pour obtenir le statut du logger
 loggerRouter.get("/status", (req: Request, res: Response) => {
   const queueLength = discordLogger ? discordLogger.queueLength : 0;
-  
+
   return res.status(200).json({
     success: true,
     data: {
@@ -302,7 +305,7 @@ loggerRouter.get("/status", (req: Request, res: Response) => {
 loggerRouter.post("/flush", async (req: Request, res: Response) => {
   try {
     await flushLogs();
-    
+
     return res.status(200).json({
       success: true,
       message: "Flush des logs effectué avec succès",

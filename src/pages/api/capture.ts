@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import fs from "fs";
 import path from "path";
-import  sendDiscordLog  from "@/lib/sendDiscordLog";
+import sendDiscordLog from "@/lib/sendDiscordLog";
 
 const CAPTURE_DIR = path.join(process.cwd(), "images");
 

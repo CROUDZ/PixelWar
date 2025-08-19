@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import type { Session } from "next-auth";
 import { LazyMotion, domAnimation } from "framer-motion";
 import "@/styles/globals.css";
+import "@/styles/animations.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import WSListener from "@/components/WSListener";
 import { EventModeProvider } from "@/context/EventMode";

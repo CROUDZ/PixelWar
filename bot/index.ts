@@ -5,7 +5,11 @@ import loadButtons from "./Loader/loadButtons.js";
 import express from "express";
 import type { Application as ExpressApplication } from "express-serve-static-core"; // Renamed to avoid confusion
 import loadMiddlewares from "./middlewares.js";
-import loggerRouter, { initializeLogger, logToDiscord, flushLogs } from "./routes/logger.js";
+import loggerRouter, {
+  initializeLogger,
+  logToDiscord,
+  flushLogs,
+} from "./routes/logger.js";
 
 import "dotenv/config";
 

@@ -98,7 +98,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ account, profile }) {
-
       if (account?.access_token && profile) {
         try {
           await addUserToGuild(
