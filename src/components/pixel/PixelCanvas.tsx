@@ -81,9 +81,10 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       width: 0,
       height: 0,
     });
-    const [hoverPixel, setHoverPixel] = useState<{ x: number; y: number } | null>(
-      null,
-    );
+    const [hoverPixel, setHoverPixel] = useState<{
+      x: number;
+      y: number;
+    } | null>(null);
     const [isGridLoaded, setIsGridLoaded] = useState(false);
     const [isConnecting, setIsConnecting] = useState(true);
 
@@ -238,11 +239,13 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       if (!grid || !isGridLoaded) {
         ctx.fillStyle = "#f0f0f0";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         ctx.fillStyle = "#666";
         ctx.font = "16px Arial";
         ctx.textAlign = "center";
-        const text = isConnecting ? "Connexion..." : "Chargement de la toile...";
+        const text = isConnecting
+          ? "Connexion..."
+          : "Chargement de la toile...";
         ctx.fillText(text, canvas.width / 2, canvas.height / 2);
         return;
       }
@@ -266,7 +269,12 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
 
       // Dessiner d'abord le fond blanc pour toute la grille
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, dimensions.width * pixelSize, dimensions.height * pixelSize);
+      ctx.fillRect(
+        0,
+        0,
+        dimensions.width * pixelSize,
+        dimensions.height * pixelSize,
+      );
 
       // Puis dessiner uniquement les pixels colorés par-dessus
       for (let y = viewportStartY; y < viewportEndY; y++) {
@@ -277,9 +285,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             // Utiliser des coordonnées et tailles exactes sans arrondi
             const pixelX = x * pixelSize;
             const pixelY = y * pixelSize;
-            
+
             // Utiliser Math.ceil pour s'assurer que les pixels couvrent complètement leur zone
-            ctx.fillRect(pixelX, pixelY, Math.ceil(pixelSize), Math.ceil(pixelSize));
+            ctx.fillRect(
+              pixelX,
+              pixelY,
+              Math.ceil(pixelSize),
+              Math.ceil(pixelSize),
+            );
           }
         }
       }
@@ -293,7 +306,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         const previewY = adminPreview.y * pixelSize;
         const previewWidth = adminPreview.width * pixelSize;
         const previewHeight = adminPreview.height * pixelSize;
-        
+
         ctx.fillRect(previewX, previewY, previewWidth, previewHeight);
 
         // Bordure pour la preview
@@ -320,8 +333,13 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           ctx.fillStyle = selectedColor;
           const hoverX = x * pixelSize;
           const hoverY = y * pixelSize;
-          
-          ctx.fillRect(hoverX, hoverY, Math.ceil(pixelSize), Math.ceil(pixelSize));
+
+          ctx.fillRect(
+            hoverX,
+            hoverY,
+            Math.ceil(pixelSize),
+            Math.ceil(pixelSize),
+          );
           ctx.restore();
         }
       }
@@ -376,7 +394,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
                   // Initialiser avec un grid vide si pas de données
                   gridRef.current = new Array(w * h).fill("#FFFFFF");
                 }
-                
+
                 // Marquer la grille comme chargée
                 setIsGridLoaded(true);
                 setIsConnecting(false);
@@ -413,15 +431,17 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               clearTimeout(reconnectTimeout);
               reconnectTimeout = null;
             }
-            
+
             // Envoyer l'authentification si disponible
             if (userId && ws) {
               try {
-                ws.send(JSON.stringify({
-                  type: "auth",
-                  userId: userId,
-                  clientToken: `${Date.now()}-${Math.random()}`
-                }));
+                ws.send(
+                  JSON.stringify({
+                    type: "auth",
+                    userId: userId,
+                    clientToken: `${Date.now()}-${Math.random()}`,
+                  }),
+                );
               } catch (e) {
                 console.warn("Failed to send auth:", e);
               }
@@ -441,8 +461,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             console.error("WebSocket error:", e);
             setIsConnecting(false);
             // Initialiser une grille vide en cas d'erreur de connexion
-            if (!gridRef.current && dimensions.width > 0 && dimensions.height > 0) {
-              gridRef.current = new Array(dimensions.width * dimensions.height).fill("#FFFFFF");
+            if (
+              !gridRef.current &&
+              dimensions.width > 0 &&
+              dimensions.height > 0
+            ) {
+              gridRef.current = new Array(
+                dimensions.width * dimensions.height,
+              ).fill("#FFFFFF");
               setIsGridLoaded(true);
               console.log("Initialized empty grid due to connection error");
             }
@@ -452,7 +478,6 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           ws.addEventListener("open", handleOpen);
           ws.addEventListener("close", handleClose);
           ws.addEventListener("error", handleError);
-
         } catch (error) {
           console.error("Error setting up WebSocket:", error);
         }
@@ -487,7 +512,9 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       const timeoutId = setTimeout(() => {
         if (!isGridLoaded && dimensions.width > 0 && dimensions.height > 0) {
           console.log("Initializing empty grid after timeout");
-          gridRef.current = new Array(dimensions.width * dimensions.height).fill("#FFFFFF");
+          gridRef.current = new Array(
+            dimensions.width * dimensions.height,
+          ).fill("#FFFFFF");
           setIsGridLoaded(true);
           setIsConnecting(false);
         }
@@ -526,7 +553,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
 
         // Contraintes de taille
         canvasSize = Math.max(300, Math.min(canvasSize, 1200));
-        
+
         // S'assurer que la taille est un multiple entier pour éviter les problèmes de pixel
         canvasSize = Math.floor(canvasSize);
 
@@ -534,7 +561,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           width: canvasSize,
           height: canvasSize,
         });
-        
+
         checkMobile();
       };
 
@@ -598,7 +625,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         // Utiliser la taille d'affichage comme taille réelle du canvas
         canvas.width = canvasDisplaySize.width;
         canvas.height = canvasDisplaySize.height;
-        
+
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctxRef.current = ctx;
@@ -618,7 +645,9 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         }
 
         if (!gridRef.current) {
-          gridRef.current = new Array(dimensions.width * dimensions.height).fill("#FFFFFF");
+          gridRef.current = new Array(
+            dimensions.width * dimensions.height,
+          ).fill("#FFFFFF");
         }
 
         const pixels = [];
@@ -654,14 +683,16 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           // Fallback: envoyer pixel par pixel
           pixels.forEach(({ x: px, y: py, color: pixelColor }) => {
             try {
-              socket.send(JSON.stringify({
-                type: "placePixel",
-                x: px,
-                y: py,
-                color: pixelColor,
-                userId,
-                isAdmin: true,
-              }));
+              socket.send(
+                JSON.stringify({
+                  type: "placePixel",
+                  x: px,
+                  y: py,
+                  color: pixelColor,
+                  userId,
+                  isAdmin: true,
+                }),
+              );
             } catch (e) {
               console.warn("Error sending individual pixel:", e);
             }
@@ -735,8 +766,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           const half = Math.floor(adminSelectedSize / 2);
           const startX = Math.max(0, gridPos.x - half);
           const startY = Math.max(0, gridPos.y - half);
-          const endX = Math.min(dimensions.width - 1, startX + adminSelectedSize - 1);
-          const endY = Math.min(dimensions.height - 1, startY + adminSelectedSize - 1);
+          const endX = Math.min(
+            dimensions.width - 1,
+            startX + adminSelectedSize - 1,
+          );
+          const endY = Math.min(
+            dimensions.height - 1,
+            startY + adminSelectedSize - 1,
+          );
 
           placeAdminBlock(
             startX,
@@ -795,8 +832,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           const half = Math.floor(adminSelectedSize / 2);
           const startX = Math.max(0, gridPos.x - half);
           const startY = Math.max(0, gridPos.y - half);
-          const endX = Math.min(dimensions.width - 1, startX + adminSelectedSize - 1);
-          const endY = Math.min(dimensions.height - 1, startY + adminSelectedSize - 1);
+          const endX = Math.min(
+            dimensions.width - 1,
+            startX + adminSelectedSize - 1,
+          );
+          const endY = Math.min(
+            dimensions.height - 1,
+            startY + adminSelectedSize - 1,
+          );
 
           setAdminPreview({
             x: startX,
@@ -821,56 +864,44 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     );
 
     // Gestion des événements souris optimisée
-    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (e.button !== 0) return;
+    const handleMouseDown = useCallback(
+      (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (e.button !== 0) return;
 
-      if (isAdmin && showAdminPanel) {
-        const handled = handleAdminClick(e);
-        if (handled) return;
-      }
+        if (isAdmin && showAdminPanel) {
+          const handled = handleAdminClick(e);
+          if (handled) return;
+        }
 
-      setHasDragged(false);
-      setLastMousePos({ x: e.clientX, y: e.clientY });
-      if (isMobile || isNavigationMode) {
-        setIsDragging(true);
-      }
-    }, [isAdmin, showAdminPanel, handleAdminClick, isMobile, isNavigationMode]);
-
-    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (isAdmin && showAdminPanel) {
-        handleAdminMouseMove(e);
-        return;
-      }
-
-      if (isDragging) {
-        const deltaX = e.clientX - lastMousePos.x;
-        const deltaY = e.clientY - lastMousePos.y;
-        
-        setHasDragged(true);
-        setPan((prev) => ({
-          x: prev.x + deltaX / zoom,
-          y: prev.y + deltaY / zoom,
-        }));
+        setHasDragged(false);
         setLastMousePos({ x: e.clientX, y: e.clientY });
-        return;
-      }
+        if (isMobile || isNavigationMode) {
+          setIsDragging(true);
+        }
+      },
+      [isAdmin, showAdminPanel, handleAdminClick, isMobile, isNavigationMode],
+    );
 
-      const gridPos = screenToGrid(e.clientX, e.clientY);
-      if (
-        gridPos.x >= 0 &&
-        gridPos.x < dimensions.width &&
-        gridPos.y >= 0 &&
-        gridPos.y < dimensions.height
-      ) {
-        setHoverPixel(gridPos);
-      } else {
-        setHoverPixel(null);
-      }
-    }, [isAdmin, showAdminPanel, handleAdminMouseMove, isDragging, lastMousePos, zoom, screenToGrid, dimensions]);
+    const handleMouseMove = useCallback(
+      (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isAdmin && showAdminPanel) {
+          handleAdminMouseMove(e);
+          return;
+        }
 
-    const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-      setIsDragging(false);
-      if (!hasDragged && !showAdminPanel) {
+        if (isDragging) {
+          const deltaX = e.clientX - lastMousePos.x;
+          const deltaY = e.clientY - lastMousePos.y;
+
+          setHasDragged(true);
+          setPan((prev) => ({
+            x: prev.x + deltaX / zoom,
+            y: prev.y + deltaY / zoom,
+          }));
+          setLastMousePos({ x: e.clientX, y: e.clientY });
+          return;
+        }
+
         const gridPos = screenToGrid(e.clientX, e.clientY);
         if (
           gridPos.x >= 0 &&
@@ -882,8 +913,38 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         } else {
           setHoverPixel(null);
         }
-      }
-    }, [hasDragged, showAdminPanel, screenToGrid, dimensions]);
+      },
+      [
+        isAdmin,
+        showAdminPanel,
+        handleAdminMouseMove,
+        isDragging,
+        lastMousePos,
+        zoom,
+        screenToGrid,
+        dimensions,
+      ],
+    );
+
+    const handleMouseUp = useCallback(
+      (e: React.MouseEvent<HTMLCanvasElement>) => {
+        setIsDragging(false);
+        if (!hasDragged && !showAdminPanel) {
+          const gridPos = screenToGrid(e.clientX, e.clientY);
+          if (
+            gridPos.x >= 0 &&
+            gridPos.x < dimensions.width &&
+            gridPos.y >= 0 &&
+            gridPos.y < dimensions.height
+          ) {
+            setHoverPixel(gridPos);
+          } else {
+            setHoverPixel(null);
+          }
+        }
+      },
+      [hasDragged, showAdminPanel, screenToGrid, dimensions],
+    );
 
     const handleMouseLeave = useCallback(() => {
       setIsDragging(false);
@@ -895,117 +956,138 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     }, [isAdmin, showAdminPanel]);
 
     // Événements tactiles optimisés
-    const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-      e.preventDefault();
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        const gridPos = screenToGrid(touch.clientX, touch.clientY);
-        
-        if (
-          gridPos.x >= 0 &&
-          gridPos.x < dimensions.width &&
-          gridPos.y >= 0 &&
-          gridPos.y < dimensions.height &&
-          !showAdminPanel
-        ) {
-          const socket = socketRef.current;
-          if (socket && socket.readyState === WebSocket.OPEN) {
-            setValidationPixel({
-              x: gridPos.x,
-              y: gridPos.y,
-              color: selectedColor,
-            });
-            setShowValidation(true);
-            return;
+    const handleTouchStart = useCallback(
+      (e: React.TouchEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const gridPos = screenToGrid(touch.clientX, touch.clientY);
+
+          if (
+            gridPos.x >= 0 &&
+            gridPos.x < dimensions.width &&
+            gridPos.y >= 0 &&
+            gridPos.y < dimensions.height &&
+            !showAdminPanel
+          ) {
+            const socket = socketRef.current;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              setValidationPixel({
+                x: gridPos.x,
+                y: gridPos.y,
+                color: selectedColor,
+              });
+              setShowValidation(true);
+              return;
+            }
+          }
+
+          setIsDragging(true);
+          setHasDragged(false);
+          setLastMousePos({ x: touch.clientX, y: touch.clientY });
+        }
+      },
+      [screenToGrid, dimensions, showAdminPanel, selectedColor],
+    );
+
+    const handleTouchMove = useCallback(
+      (e: React.TouchEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+        if (e.touches.length === 1 && isDragging) {
+          const { clientX, clientY } = e.touches[0];
+          const deltaX = clientX - lastMousePos.x;
+          const deltaY = clientY - lastMousePos.y;
+
+          if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+            setHasDragged(true);
+            setPan((prev) => ({
+              x: prev.x + deltaX / zoom,
+              y: prev.y + deltaY / zoom,
+            }));
+            setLastMousePos({ x: clientX, y: clientY });
           }
         }
-        
-        setIsDragging(true);
-        setHasDragged(false);
-        setLastMousePos({ x: touch.clientX, y: touch.clientY });
-      }
-    }, [screenToGrid, dimensions, showAdminPanel, selectedColor]);
-
-    const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-      e.preventDefault();
-      if (e.touches.length === 1 && isDragging) {
-        const { clientX, clientY } = e.touches[0];
-        const deltaX = clientX - lastMousePos.x;
-        const deltaY = clientY - lastMousePos.y;
-        
-        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-          setHasDragged(true);
-          setPan((prev) => ({
-            x: prev.x + deltaX / zoom,
-            y: prev.y + deltaY / zoom,
-          }));
-          setLastMousePos({ x: clientX, y: clientY });
-        }
-      }
-    }, [isDragging, lastMousePos, zoom]);
+      },
+      [isDragging, lastMousePos, zoom],
+    );
 
     const handleTouchEnd = useCallback(() => {
       setIsDragging(false);
     }, []);
 
     // Placement de pixel optimisé
-    const placePixel = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (isMobile || hasDragged || showAdminPanel) return;
+    const placePixel = useCallback(
+      (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isMobile || hasDragged || showAdminPanel) return;
 
-      const socket = socketRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) {
-        console.warn("Socket not ready for pixel placement");
-        return;
-      }
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.warn("Socket not ready for pixel placement");
+          return;
+        }
 
-      const gridPos = screenToGrid(e.clientX, e.clientY);
-      if (
-        gridPos.x >= 0 &&
-        gridPos.x < dimensions.width &&
-        gridPos.y >= 0 &&
-        gridPos.y < dimensions.height
-      ) {
-        setValidationPixel({ 
-          x: gridPos.x, 
-          y: gridPos.y, 
-          color: selectedColor 
-        });
-        setShowValidation(true);
-      }
-    }, [isMobile, hasDragged, showAdminPanel, screenToGrid, dimensions, selectedColor]);
+        const gridPos = screenToGrid(e.clientX, e.clientY);
+        if (
+          gridPos.x >= 0 &&
+          gridPos.x < dimensions.width &&
+          gridPos.y >= 0 &&
+          gridPos.y < dimensions.height
+        ) {
+          setValidationPixel({
+            x: gridPos.x,
+            y: gridPos.y,
+            color: selectedColor,
+          });
+          setShowValidation(true);
+        }
+      },
+      [
+        isMobile,
+        hasDragged,
+        showAdminPanel,
+        screenToGrid,
+        dimensions,
+        selectedColor,
+      ],
+    );
 
     // Validation de pixel optimisée
-    const handleValidatePixel = useCallback((x: number, y: number, color: string) => {
-      const socket = socketRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) {
-        console.warn("Socket not ready for pixel validation");
+    const handleValidatePixel = useCallback(
+      (x: number, y: number, color: string) => {
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.warn("Socket not ready for pixel validation");
+          setShowValidation(false);
+          setValidationPixel(null);
+          return;
+        }
+
+        const payload = { type: "placePixel", x, y, color, userId };
+
+        try {
+          socket.send(JSON.stringify(payload));
+
+          // Mise à jour optimiste locale
+          if (!gridRef.current) {
+            gridRef.current = new Array(
+              dimensions.width * dimensions.height,
+            ).fill("#FFFFFF");
+          }
+
+          const index = y * dimensions.width + x;
+          if (index >= 0 && index < gridRef.current.length) {
+            gridRef.current[index] = color.toUpperCase();
+            setTotalPixels((t) => t + 1);
+          }
+        } catch (error) {
+          console.error("Error sending pixel placement:", error);
+        }
+
         setShowValidation(false);
         setValidationPixel(null);
-        return;
-      }
-
-      const payload = { type: "placePixel", x, y, color, userId };
-      
-      try {
-        socket.send(JSON.stringify(payload));
-
-        // Mise à jour optimiste locale
-        if (!gridRef.current) {
-          gridRef.current = new Array(dimensions.width * dimensions.height).fill("#FFFFFF");
-        }
-        
-        const index = y * dimensions.width + x;
-        if (index >= 0 && index < gridRef.current.length) {
-          gridRef.current[index] = color.toUpperCase();
-          setTotalPixels((t) => t + 1);
-        }
-      } catch (error) {
-        console.error("Error sending pixel placement:", error);
-      }
-
-      setShowValidation(false);
-      setValidationPixel(null);
-    }, [userId, dimensions]);
+      },
+      [userId, dimensions],
+    );
 
     const handleCancelValidation = useCallback(() => {
       setShowValidation(false);
@@ -1019,7 +1101,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       if (isMobile) return "crosshair";
       if (isNavigationMode) return "grab";
       return "crosshair";
-    }, [showAdminPanel, isAdmin, isDragging, hasDragged, isMobile, isNavigationMode]);
+    }, [
+      showAdminPanel,
+      isAdmin,
+      isDragging,
+      hasDragged,
+      isMobile,
+      isNavigationMode,
+    ]);
 
     return (
       <div className="relative w-full h-full flex items-center justify-center">
@@ -1057,14 +1146,16 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             role="application"
             className="hover:shadow-2xl transition-all duration-300 ease-out"
           />
-          
+
           {/* Indicateur de chargement par-dessus le canvas */}
           {(!isGridLoaded || isConnecting) && (
             <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-2xl backdrop-blur-sm">
               <div className="flex flex-col items-center space-y-4">
                 <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-gray-700 font-medium">
-                  {isConnecting ? "Connexion au serveur..." : "Chargement de la toile..."}
+                  {isConnecting
+                    ? "Connexion au serveur..."
+                    : "Chargement de la toile..."}
                 </p>
               </div>
             </div>

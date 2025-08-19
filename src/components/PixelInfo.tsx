@@ -161,7 +161,7 @@ const PixelInfo: React.FC = () => {
           ...d,
           count: typeof d.count === "number" ? d.count : 0,
         })),
-      [chartData],
+      [],
     );
 
     const maxCount = Math.max(...data.map((d) => d.count), 1);
@@ -169,7 +169,7 @@ const PixelInfo: React.FC = () => {
     // Determine tick interval to avoid overcrowding on small screens
     const tickInterval = Math.max(0, Math.floor(data.length / 6));
 
-    const tickFormatter = (value: string, index: number) => {
+    const tickFormatter = (value: string) => {
       // If labels are time strings already, shorten for compact screens
       if (timeRange === "1h" || timeRange === "6h") return value; // HH:MM
       if (timeRange === "24h") return value; // HH
@@ -177,21 +177,30 @@ const PixelInfo: React.FC = () => {
       return value;
     };
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    interface CustomTooltipProps {
+      active?: boolean;
+      payload?: { payload: { count: number; label: string } }[];
+    }
+
+    const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
       const point = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow text-xs border">
-          <div className="font-semibold">{point.count} pixels</div>
-          <div className="text-gray-500 text-[11px]">{point.label}</div>
+        <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg shadow text-xs border max-w-[150px]">
+          <div className="font-semibold text-xs sm:text-sm">
+            {point.count} pixels
+          </div>
+          <div className="text-gray-500 text-[10px] sm:text-[11px] truncate">
+            {point.label}
+          </div>
         </div>
       );
     };
 
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 dark:text-white">
             Activité Temporelle
           </h3>
           <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -199,11 +208,16 @@ const PixelInfo: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-full h-[240px]">
+        <div className="w-full h-[180px] sm:h-[240px] lg:h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
-              margin={{ top: 10, right: 16, left: 0, bottom: 6 }}
+              margin={{
+                top: 10,
+                right: 8,
+                left: 0,
+                bottom: 6,
+              }}
             >
               <defs>
                 <linearGradient id="gradCount" x1="0" y1="0" x2="0" y2="1">
@@ -220,17 +234,19 @@ const PixelInfo: React.FC = () => {
                 interval={tickInterval}
                 axisLine={false}
                 tickLine={false}
-                minTickGap={8}
-                height={36}
+                minTickGap={4}
+                height={24}
+                tick={{ fontSize: 10 }}
               />
 
               <YAxis
                 allowDecimals={false}
-                tickCount={5}
+                tickCount={4}
                 axisLine={false}
                 tickLine={false}
-                width={48}
+                width={32}
                 domain={[0, Math.max(maxCount, 5)]}
+                tick={{ fontSize: 10 }}
               />
 
               <Tooltip content={<CustomTooltip />} />
@@ -258,7 +274,7 @@ const PixelInfo: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
           Affichage optimisé pour mobile — faites défiler les labels si
           nécessaire.
         </div>
@@ -474,12 +490,15 @@ const PixelInfo: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="loading-shimmer h-6 rounded w-3/4"></div>
-        <div className="loading-shimmer h-48 rounded-xl"></div>
+      <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
+        <div className="loading-shimmer h-4 sm:h-6 rounded w-3/4"></div>
+        <div className="loading-shimmer h-32 sm:h-48 rounded-lg sm:rounded-xl"></div>
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="loading-shimmer h-12 rounded-lg"></div>
+            <div
+              key={i}
+              className="loading-shimmer h-8 sm:h-12 rounded-lg"
+            ></div>
           ))}
         </div>
       </div>
@@ -488,10 +507,10 @@ const PixelInfo: React.FC = () => {
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="text-center py-6 sm:py-8 px-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
           <svg
-            className="w-6 h-6 text-red-600 dark:text-red-400"
+            className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -504,22 +523,24 @@ const PixelInfo: React.FC = () => {
             />
           </svg>
         </div>
-        <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+        <p className="text-red-600 dark:text-red-400 mb-3 sm:mb-4 text-sm sm:text-base">
+          {error}
+        </p>
         <button
           onClick={fetchPixels}
-          className="glass-button px-4 py-2 rounded-lg text-sm font-medium"
+          className="glass-button px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium"
         >
-          Réessayer
+          🔄 Réessayer
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 lg:p-0 max-w-full overflow-hidden">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div className="flex items-center gap-2">
-          <h2 className="font-bold text-lg text-gray-900 dark:text-white">
+          <h2 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-900 dark:text-white">
             Statistiques
           </h2>
           {refreshing && (
@@ -527,12 +548,12 @@ const PixelInfo: React.FC = () => {
           )}
         </div>
 
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-full sm:w-auto">
           {(["1h", "6h", "24h", "7d"] as const).map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 timeRange === range
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -544,58 +565,61 @@ const PixelInfo: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+      <div className="flex flex-col sm:flex-row bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1 sm:gap-0">
         <button
           onClick={() => setViewMode("chart")}
-          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 sm:gap-2 ${
             viewMode === "chart"
               ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
-          Graphique
+          <span className="hidden sm:inline">📈</span>
+          <span className="truncate">Graphique</span>
         </button>
         <button
           onClick={() => setViewMode("leaderboard")}
-          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 sm:gap-2 ${
             viewMode === "leaderboard"
               ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
-          Classement
+          <span className="hidden sm:inline">🏆</span>
+          <span className="truncate">Classement</span>
         </button>
         <button
           onClick={() => setViewMode("heatmap")}
-          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 sm:gap-2 ${
             viewMode === "heatmap"
               ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
-          Heatmap
+          <span className="hidden sm:inline">🔥</span>
+          <span className="truncate">Heatmap</span>
         </button>
       </div>
 
-      <div className="flex flex-row gap-4 justify-between">
-        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-cyan-400">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:flex lg:flex-row lg:justify-between">
+        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 backdrop-blur-sm border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-4 text-center flex-1">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-400">
             {filteredPixels.length}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
             Pixels Total
           </div>
         </div>
-        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-green-400">
+        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-4 text-center flex-1">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-400">
             {new Set(filteredPixels.map((p) => p.userId)).size}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
             Utilisateurs
           </div>
         </div>
-        <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-yellow-400">
+        <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-sm border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-4 text-center flex-1">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-yellow-400">
             {filteredPixels.length > 0
               ? (
                   filteredPixels.length /
@@ -603,18 +627,20 @@ const PixelInfo: React.FC = () => {
                 ).toFixed(1)
               : "0.0"}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">px/min</div>
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
+            px/min
+          </div>
         </div>
       </div>
 
-      <div className="glass-panel p-6">
+      <div className="glass-panel p-3 sm:p-4 lg:p-6">
         {viewMode === "chart" && <PixelChart />}
 
         {/* Leaderboard & Heatmap markup unchanged (omitted here for brevity) */}
         {viewMode === "leaderboard" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 dark:text-white">
                 Classement
               </h3>
               <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -628,11 +654,24 @@ const PixelInfo: React.FC = () => {
                 placeholder="Rechercher un utilisateur..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-cyan-500 text-sm"
+                className="w-full pl-8 sm:pl-10 pr-4 py-2 sm:py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-cyan-500 text-sm"
               />
+              <svg
+                className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-64 sm:max-h-80 lg:max-h-96 overflow-y-auto">
               {leaderboardData.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   {searchTerm
@@ -643,36 +682,36 @@ const PixelInfo: React.FC = () => {
                 leaderboardData.map((user, index) => (
                   <div
                     key={user.userId}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${user.userId === session?.user?.id ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                    className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-colors ${user.userId === session?.user?.id ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${index === 0 ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-white" : index === 1 ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white" : index === 2 ? "bg-gradient-to-r from-orange-400 to-red-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${index === 0 ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-white" : index === 1 ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white" : index === 2 ? "bg-gradient-to-r from-orange-400 to-red-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}
                     >
                       {index + 1}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">
                         {user.userName ||
                           (user.userId
                             ? `User ${user.userId.slice(-8)}`
                             : "User inconnu")}
                         {user.userId === session?.user?.id && (
-                          <span className="ml-2 text-xs bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200 px-2 py-0.5 rounded-full">
+                          <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200 px-1 sm:px-2 py-0.5 rounded-full">
                             Vous
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         {user.averagePerMinute.toFixed(1)} px/min
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <div className="font-bold text-gray-900 dark:text-white">
+                      <div className="font-bold text-sm sm:text-base text-gray-900 dark:text-white">
                         {user.pixelCount}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                         pixels
                       </div>
                     </div>
@@ -684,13 +723,13 @@ const PixelInfo: React.FC = () => {
         )}
 
         {viewMode === "heatmap" && (
-          <div className="space-y-6">
-            <div className="glass-panel p-6">
-              <h3 className="text-xl font-bold mb-4 text-center">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="glass-panel p-3 sm:p-4 lg:p-6">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 text-center">
                 🔥 Carte Thermique
               </h3>
               <div
-                className="relative bg-gray-900 rounded-xl overflow-hidden"
+                className="relative bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden mx-auto max-w-md sm:max-w-lg lg:max-w-xl"
                 style={{ aspectRatio: "1" }}
               >
                 <svg
@@ -758,66 +797,76 @@ const PixelInfo: React.FC = () => {
                   ))}
                 </svg>
 
-                <div className="absolute bottom-2 left-2 glass-panel p-2 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span>Faible</span>
-                    <div className="w-12 h-3 bg-gradient-to-r from-blue-400 to-red-500 rounded"></div>
-                    <span>Intense</span>
+                <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 glass-panel p-1 sm:p-2 text-[10px] sm:text-xs">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <span className="hidden sm:inline">Faible</span>
+                    <span className="sm:hidden">F</span>
+                    <div className="w-8 sm:w-12 h-2 sm:h-3 bg-gradient-to-r from-blue-400 to-red-500 rounded"></div>
+                    <span className="hidden sm:inline">Intense</span>
+                    <span className="sm:hidden">I</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="glass-panel p-6">
-              <h3 className="text-xl font-bold mb-4">
+            <div className="glass-panel p-3 sm:p-4 lg:p-6">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">
                 🎯 Zones les Plus Actives
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {heatmapData.hotspots.map((hotspot, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-white/5 rounded-lg"
+                    className="flex items-center justify-between p-2 sm:p-3 bg-white/5 rounded-lg"
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl font-bold text-yellow-400">
+                    <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                      <span className="text-lg sm:text-2xl font-bold text-yellow-400 flex-shrink-0">
                         #{hotspot.rank}
                       </span>
-                      <div>
-                        <div className="font-semibold">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm sm:text-base truncate">
                           Zone ({Math.floor(hotspot.coordinates.startX)},{" "}
                           {Math.floor(hotspot.coordinates.startY)})
                         </div>
-                        <div className="text-sm text-gray-400">
+                        <div className="text-xs sm:text-sm text-gray-400">
                           {hotspot.count} pixels •{" "}
                           {hotspot.percentage.toFixed(1)}% du total
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold">{hotspot.count}</div>
-                      <div className="text-xs text-gray-400">pixels</div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm sm:text-lg font-bold">
+                        {hotspot.count}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-400">
+                        pixels
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass-panel p-6">
-                <h3 className="text-xl font-bold mb-4">🏆 Exploits Récents</h3>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="glass-panel p-3 sm:p-4 lg:p-6">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">
+                  🏆 Exploits Récents
+                </h3>
+                <div className="space-y-2 sm:space-y-3 max-h-60 overflow-y-auto">
                   {contributionsData.achievements
                     .slice(0, 8)
                     .map((achievement, index) => (
                       <div
                         key={index}
-                        className={`p-3 rounded-lg border-l-4 ${achievement.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400" : achievement.rarity === "epic" ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400" : achievement.rarity === "rare" ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-400" : "bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-400"}`}
+                        className={`p-2 sm:p-3 rounded-lg border-l-4 ${achievement.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400" : achievement.rarity === "epic" ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400" : achievement.rarity === "rare" ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-400" : "bg-gradient-to-r from-gray-500/20 to-gray-600/20 border-gray-400"}`}
                       >
-                        <div className="font-semibold">{achievement.title}</div>
-                        <div className="text-sm text-gray-400">
+                        <div className="font-semibold text-sm sm:text-base">
+                          {achievement.title}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-400">
                           {achievement.description}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-[10px] sm:text-xs text-gray-500 mt-1 truncate">
                           👤 {achievement.userId}
                         </div>
                       </div>
@@ -825,11 +874,13 @@ const PixelInfo: React.FC = () => {
                 </div>
               </div>
 
-              <div className="glass-panel p-6">
-                <h3 className="text-xl font-bold mb-4">
+              <div className="glass-panel p-3 sm:p-4 lg:p-6">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">
                   ⚡ Contributeurs Actifs
                 </h3>
-                <div className="text-sm text-gray-400 mb-3">Dernière heure</div>
+                <div className="text-xs sm:text-sm text-gray-400 mb-3">
+                  Dernière heure
+                </div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {contributionsData.recentContributors.map(
                     (contributor, index) => (
@@ -837,8 +888,8 @@ const PixelInfo: React.FC = () => {
                         key={index}
                         className="flex items-center justify-between p-2 bg-white/5 rounded"
                       >
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <span className="text-base sm:text-lg flex-shrink-0">
                             {index === 0
                               ? "🥇"
                               : index === 1
@@ -847,11 +898,11 @@ const PixelInfo: React.FC = () => {
                                   ? "🥉"
                                   : "💫"}
                           </span>
-                          <span className="font-medium">
+                          <span className="font-medium text-sm sm:text-base truncate">
                             {contributor.userId}
                           </span>
                         </div>
-                        <span className="text-yellow-400 font-bold">
+                        <span className="text-yellow-400 font-bold text-sm sm:text-base flex-shrink-0">
                           {contributor.count} px
                         </span>
                       </div>
@@ -861,36 +912,42 @@ const PixelInfo: React.FC = () => {
               </div>
             </div>
 
-            <div className="glass-panel p-6">
-              <h3 className="text-xl font-bold mb-4">
+            <div className="glass-panel p-3 sm:p-4 lg:p-6">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">
                 📊 Analyse d'Engagement
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-400">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                <div className="text-center p-2 sm:p-4 bg-white/5 rounded-lg">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-400">
                     {heatmapData.data.length}
                   </div>
-                  <div className="text-sm text-gray-400">Zones Actives</div>
+                  <div className="text-[10px] sm:text-sm text-gray-400 leading-tight">
+                    Zones Actives
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl font-bold text-green-400">
+                <div className="text-center p-2 sm:p-4 bg-white/5 rounded-lg">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-400">
                     {heatmapData.maxIntensity}
                   </div>
-                  <div className="text-sm text-gray-400">Max par Zone</div>
+                  <div className="text-[10px] sm:text-sm text-gray-400 leading-tight">
+                    Max par Zone
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-400">
+                <div className="text-center p-2 sm:p-4 bg-white/5 rounded-lg">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-400">
                     {contributionsData.achievements.length}
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-[10px] sm:text-sm text-gray-400 leading-tight">
                     Exploits Débloqués
                   </div>
                 </div>
-                <div className="text-center p-4 bg-white/5 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-400">
+                <div className="text-center p-2 sm:p-4 bg-white/5 rounded-lg">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-yellow-400">
                     {contributionsData.recentContributors.length}
                   </div>
-                  <div className="text-sm text-gray-400">Actifs (1h)</div>
+                  <div className="text-[10px] sm:text-sm text-gray-400 leading-tight">
+                    Actifs (1h)
+                  </div>
                 </div>
               </div>
             </div>
@@ -898,12 +955,21 @@ const PixelInfo: React.FC = () => {
         )}
       </div>
 
-      <button
-        onClick={exportStatsAsJson}
-        className="glass-button px-4 py-2 rounded-lg text-sm font-medium"
-      >
-        Exporter JSON
-      </button>
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <button
+          onClick={exportStatsAsJson}
+          className="glass-button px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium flex-1 sm:flex-none"
+        >
+          📊 Exporter JSON
+        </button>
+
+        <button
+          onClick={fetchPixels}
+          className="glass-button px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium flex-1 sm:flex-none"
+        >
+          🔄 Actualiser
+        </button>
+      </div>
     </div>
   );
 };

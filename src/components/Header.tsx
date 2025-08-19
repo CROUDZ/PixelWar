@@ -60,7 +60,13 @@ const Header: React.FC = () => {
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const navItems: NavItem[] = [
-    { name: "Accueil", href: "/", target: "_self", admin: false, icon: <Home size={18} /> },
+    {
+      name: "Accueil",
+      href: "/",
+      target: "_self",
+      admin: false,
+      icon: <Home size={18} />,
+    },
     {
       name: "Discord",
       href: "https://discord.gg/your-discord-link",
@@ -68,7 +74,13 @@ const Header: React.FC = () => {
       admin: false,
       icon: <MessageCircle size={18} />,
     },
-    { name: "Admin", href: "/admin", target: "_self", admin: true, icon: <Shield size={18} /> },
+    {
+      name: "Admin",
+      href: "/admin",
+      target: "_self",
+      admin: true,
+      icon: <Shield size={18} />,
+    },
   ];
 
   // fermer menus au clic extérieur + touche Escape
@@ -103,7 +115,10 @@ const Header: React.FC = () => {
     setIsSyncing(true);
     setSyncMessage("");
     try {
-      const res = await fetch("/api/user/sync", { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await fetch("/api/user/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       const data = await res.json();
       if (res.ok) {
         setSyncMessage("✅ Synchronisation réussie !");
@@ -167,10 +182,14 @@ const Header: React.FC = () => {
       if (startTime && endTime) {
         if (now < startTime) {
           setEventStatus("upcoming");
-          setTimeRemaining(formatTimeRemaining(startTime.getTime() - now.getTime()));
+          setTimeRemaining(
+            formatTimeRemaining(startTime.getTime() - now.getTime()),
+          );
         } else if (now >= startTime && now <= endTime) {
           setEventStatus("active");
-          setTimeRemaining(formatTimeRemaining(endTime.getTime() - now.getTime()));
+          setTimeRemaining(
+            formatTimeRemaining(endTime.getTime() - now.getTime()),
+          );
         } else {
           setEventStatus("ended");
           setTimeRemaining("");
@@ -230,7 +249,9 @@ const Header: React.FC = () => {
   };
 
   const statusConfig = getEventStatusConfig();
-  const filteredNavItems = navItems.filter((item) => !item.admin || session?.user?.role === "ADMIN");
+  const filteredNavItems = navItems.filter(
+    (item) => !item.admin || session?.user?.role === "ADMIN",
+  );
 
   return (
     <>
@@ -244,9 +265,18 @@ const Header: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <m.div className="flex items-center space-x-3" whileHover={{ scale: 1.02 }}>
+            <m.div
+              className="flex items-center space-x-3"
+              whileHover={{ scale: 1.02 }}
+            >
               <div className="relative">
-                <Image src="/HUB-RP.webp" alt="PixelWar Logo" width={40} height={40} className="rounded-lg shadow-sm" />
+                <Image
+                  src="/HUB-RP.webp"
+                  alt="PixelWar Logo"
+                  width={40}
+                  height={40}
+                  className="rounded-lg shadow-sm"
+                />
                 <div className="absolute inset-0 rounded-lg blur-sm -z-10 bg-indigo-100 dark:bg-indigo-900/20"></div>
               </div>
               <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent">
@@ -262,11 +292,19 @@ const Header: React.FC = () => {
               className={`hidden md:flex items-center space-x-3 px-3 py-2 rounded-lg border ${statusConfig.bg} ${statusConfig.border} shadow-sm`}
               aria-hidden={false}
             >
-              <div className={`flex items-center space-x-2 ${statusConfig.pulse ? "animate-pulse" : ""}`}>
+              <div
+                className={`flex items-center space-x-2 ${statusConfig.pulse ? "animate-pulse" : ""}`}
+              >
                 {statusConfig.icon}
                 <div className="flex flex-col">
-                  <span className={`text-sm font-medium ${statusConfig.text}`}>{statusConfig.text}</span>
-                  {statusConfig.subtext && <span className={`text-xs opacity-80 ${statusConfig.text}`}>{statusConfig.subtext}</span>}
+                  <span className={`text-sm font-medium ${statusConfig.text}`}>
+                    {statusConfig.text}
+                  </span>
+                  {statusConfig.subtext && (
+                    <span className={`text-xs opacity-80 ${statusConfig.text}`}>
+                      {statusConfig.subtext}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
@@ -275,7 +313,11 @@ const Header: React.FC = () => {
             {/* Navigation (desktop) */}
             <nav className="hidden md:flex items-center space-x-2">
               {filteredNavItems.map((item) => (
-                <m.div key={item.name} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                <m.div
+                  key={item.name}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <Link
                     href={item.href}
                     target={item.target}
@@ -300,11 +342,21 @@ const Header: React.FC = () => {
               >
                 <AnimatePresence mode="wait">
                   {theme === "dark" ? (
-                    <m.div key="moon" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                    <m.div
+                      key="moon"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                    >
                       <Moon size={18} className="text-indigo-600" />
                     </m.div>
                   ) : (
-                    <m.div key="sun" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                    <m.div
+                      key="sun"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                    >
                       <Sun size={18} className="text-indigo-600" />
                     </m.div>
                   )}
@@ -318,7 +370,11 @@ const Header: React.FC = () => {
                   <div className="w-20 h-4 bg-gray-200 rounded animate-pulse hidden sm:block" />
                 </div>
               ) : session ? (
-                <div className="relative" onClick={(e) => e.stopPropagation()} ref={userMenuRef}>
+                <div
+                  className="relative"
+                  onClick={(e) => e.stopPropagation()}
+                  ref={userMenuRef}
+                >
                   <m.button
                     onClick={() => setShowUserMenu((s) => !s)}
                     whileHover={{ scale: 1.02 }}
@@ -330,13 +386,24 @@ const Header: React.FC = () => {
                   >
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-r from-indigo-600 to-emerald-500 flex items-center justify-center">
                       {session.user?.image ? (
-                        <Image src={session.user.image} alt="Avatar" width={32} height={32} className="w-full h-full object-cover" />
+                        <Image
+                          src={session.user.image}
+                          alt="Avatar"
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <User size={16} className="text-white" />
                       )}
                     </div>
-                    <span className="font-medium text-sm max-w-[6rem] truncate hidden sm:block">{session.user?.name}</span>
-                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-150 hidden sm:block ${showUserMenu ? "rotate-180" : ""}`} />
+                    <span className="font-medium text-sm max-w-[6rem] truncate hidden sm:block">
+                      {session.user?.name}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className={`text-gray-400 transition-transform duration-150 hidden sm:block ${showUserMenu ? "rotate-180" : ""}`}
+                    />
                   </m.button>
 
                   <AnimatePresence>
@@ -355,14 +422,24 @@ const Header: React.FC = () => {
                           <div className="flex items-center space-x-3 mb-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-indigo-600 to-emerald-500 flex items-center justify-center">
                               {session.user?.image ? (
-                                <Image src={session.user.image} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />
+                                <Image
+                                  src={session.user.image}
+                                  alt="Avatar"
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
                                 <User size={20} className="text-white" />
                               )}
                             </div>
                             <div>
-                              <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{session.user?.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.user?.email}</p>
+                              <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                                {session.user?.name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {session.user?.email}
+                              </p>
                             </div>
                           </div>
 
@@ -372,7 +449,9 @@ const Header: React.FC = () => {
                               <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-800">
                                 <div className="flex items-center space-x-2 text-sm">
                                   <Link2 size={16} className="text-green-600" />
-                                  <span className="font-medium">Liaison Discord</span>
+                                  <span className="font-medium">
+                                    Liaison Discord
+                                  </span>
                                 </div>
                                 <div className="flex items-center space-x-1 text-sm text-green-600">
                                   <CheckCircle size={16} />
@@ -381,12 +460,21 @@ const Header: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => openInPopup("http://localhost:3000/auth/discord-redirect")}
+                                onClick={() =>
+                                  openInPopup(
+                                    "http://localhost:3000/auth/discord-redirect",
+                                  )
+                                }
                                 className="w-full flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
                               >
                                 <div className="flex items-center space-x-2">
-                                  <Link2 size={16} className="text-orange-500" />
-                                  <span className="font-medium">Liaison Discord</span>
+                                  <Link2
+                                    size={16}
+                                    className="text-orange-500"
+                                  />
+                                  <span className="font-medium">
+                                    Liaison Discord
+                                  </span>
                                 </div>
                                 <div className="flex items-center space-x-1 text-sm text-orange-600">
                                   <AlertCircle size={16} />
@@ -397,12 +485,34 @@ const Header: React.FC = () => {
 
                             <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-800">
                               <div className="flex items-center space-x-2">
-                                <Zap size={16} className={session.user?.boosted ? "text-purple-600" : "text-gray-400"} />
-                                <span className="font-medium">Serveur Boosté</span>
+                                <Zap
+                                  size={16}
+                                  className={
+                                    session.user?.boosted
+                                      ? "text-purple-600"
+                                      : "text-gray-400"
+                                  }
+                                />
+                                <span className="font-medium">
+                                  Serveur Boosté
+                                </span>
                               </div>
                               <div className="flex items-center space-x-1 text-sm">
-                                {session.user?.boosted ? <CheckCircle size={16} className="text-purple-600" /> : <X size={16} className="text-gray-400" />}
-                                <span className={session.user?.boosted ? "text-purple-600 font-medium" : "text-gray-500 font-medium"}>
+                                {session.user?.boosted ? (
+                                  <CheckCircle
+                                    size={16}
+                                    className="text-purple-600"
+                                  />
+                                ) : (
+                                  <X size={16} className="text-gray-400" />
+                                )}
+                                <span
+                                  className={
+                                    session.user?.boosted
+                                      ? "text-purple-600 font-medium"
+                                      : "text-gray-500 font-medium"
+                                  }
+                                >
                                   {session.user?.boosted ? "Actif" : "Inactif"}
                                 </span>
                               </div>
@@ -416,18 +526,35 @@ const Header: React.FC = () => {
                             disabled={isSyncing}
                             className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition disabled:opacity-50"
                           >
-                            <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
-                            <span>{isSyncing ? "Synchronisation..." : "Synchroniser Discord"}</span>
+                            <RefreshCw
+                              size={16}
+                              className={isSyncing ? "animate-spin" : ""}
+                            />
+                            <span>
+                              {isSyncing
+                                ? "Synchronisation..."
+                                : "Synchroniser Discord"}
+                            </span>
                           </button>
 
-                          {syncMessage && <div className="px-3 py-2 text-xs text-center rounded-lg bg-gray-50">{syncMessage}</div>}
+                          {syncMessage && (
+                            <div className="px-3 py-2 text-xs text-center rounded-lg bg-gray-50">
+                              {syncMessage}
+                            </div>
+                          )}
 
-                          <button onClick={() => signOut()} className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition">
+                          <button
+                            onClick={() => signOut()}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition"
+                          >
                             <LogOut size={16} />
                             <span>Déconnexion</span>
                           </button>
 
-                          <button onClick={() => setShowDeleteConfirm(true)} className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
+                          <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                          >
                             <Trash2 size={16} />
                             <span>Supprimer le compte</span>
                           </button>
@@ -455,50 +582,111 @@ const Header: React.FC = () => {
                               >
                                 <div className="flex items-center space-x-3 mb-4">
                                   <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                                    <Trash2 size={20} className="text-red-600" />
+                                    <Trash2
+                                      size={20}
+                                      className="text-red-600"
+                                    />
                                   </div>
                                   <div>
-                                    <h3 className="font-semibold text-lg">Supprimer le compte</h3>
-                                    <p className="text-sm text-gray-500">Cette action est irréversible</p>
+                                    <h3 className="font-semibold text-lg">
+                                      Supprimer le compte
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                      Cette action est irréversible
+                                    </p>
                                   </div>
                                 </div>
 
                                 {deleteStep === 0 && (
                                   <div className="space-y-4">
                                     <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                                      <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">⚠️ Attention</h4>
+                                      <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
+                                        ⚠️ Attention
+                                      </h4>
                                       <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                                        <li>• Tous vos pixels seront supprimés</li>
-                                        <li>• Votre compte sera définitivement effacé</li>
-                                        <li>• Cette action ne peut pas être annulée</li>
+                                        <li>
+                                          • Tous vos pixels seront supprimés
+                                        </li>
+                                        <li>
+                                          • Votre compte sera définitivement
+                                          effacé
+                                        </li>
+                                        <li>
+                                          • Cette action ne peut pas être
+                                          annulée
+                                        </li>
                                       </ul>
                                     </div>
 
                                     <div className="flex space-x-3">
-                                      <button onClick={() => { setShowDeleteConfirm(false); setDeleteStep(0); }} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Annuler</button>
-                                      <button onClick={() => setDeleteStep(1)} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Continuer</button>
+                                      <button
+                                        onClick={() => {
+                                          setShowDeleteConfirm(false);
+                                          setDeleteStep(0);
+                                        }}
+                                        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                      >
+                                        Annuler
+                                      </button>
+                                      <button
+                                        onClick={() => setDeleteStep(1)}
+                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                      >
+                                        Continuer
+                                      </button>
                                     </div>
                                   </div>
                                 )}
 
                                 {deleteStep === 1 && (
                                   <div className="space-y-4">
-                                    <p className="text-sm">Tapez <strong>"SUPPRIMER"</strong> pour confirmer :</p>
-                                    <input type="text" onChange={(e) => { if (e.target.value === "SUPPRIMER") setDeleteStep(2); }} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder='Tapez SUPPRIMER' />
+                                    <p className="text-sm">
+                                      Tapez <strong>"SUPPRIMER"</strong> pour
+                                      confirmer :
+                                    </p>
+                                    <input
+                                      type="text"
+                                      onChange={(e) => {
+                                        if (e.target.value === "SUPPRIMER")
+                                          setDeleteStep(2);
+                                      }}
+                                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                      placeholder="Tapez SUPPRIMER"
+                                    />
                                     <div className="flex space-x-3">
-                                      <button onClick={() => setDeleteStep(0)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Retour</button>
+                                      <button
+                                        onClick={() => setDeleteStep(0)}
+                                        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                      >
+                                        Retour
+                                      </button>
                                     </div>
                                   </div>
                                 )}
 
                                 {deleteStep === 2 && (
                                   <div className="space-y-4">
-                                    <p className="text-sm font-medium text-red-600">🚨 Dernière confirmation</p>
-                                    <p className="text-sm">Êtes-vous absolument certain(e) ?</p>
+                                    <p className="text-sm font-medium text-red-600">
+                                      🚨 Dernière confirmation
+                                    </p>
+                                    <p className="text-sm">
+                                      Êtes-vous absolument certain(e) ?
+                                    </p>
                                     <div className="flex space-x-3">
-                                      <button onClick={() => setDeleteStep(1)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">Retour</button>
-                                      <button onClick={handleDeleteAccount} disabled={isDeleting} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50">
-                                        {isDeleting ? "Suppression..." : "Supprimer définitivement"}
+                                      <button
+                                        onClick={() => setDeleteStep(1)}
+                                        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                      >
+                                        Retour
+                                      </button>
+                                      <button
+                                        onClick={handleDeleteAccount}
+                                        disabled={isDeleting}
+                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50"
+                                      >
+                                        {isDeleting
+                                          ? "Suppression..."
+                                          : "Supprimer définitivement"}
                                       </button>
                                     </div>
                                   </div>
@@ -515,7 +703,9 @@ const Header: React.FC = () => {
                 <m.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => openInPopup("http://localhost:3000/auth/discord-redirect")}
+                  onClick={() =>
+                    openInPopup("http://localhost:3000/auth/discord-redirect")
+                  }
                   className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-md transition"
                 >
                   Connexion
@@ -536,11 +726,21 @@ const Header: React.FC = () => {
               >
                 <AnimatePresence mode="wait">
                   {isMobileMenuOpen ? (
-                    <m.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                    <m.div
+                      key="close"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                    >
                       <X size={20} />
                     </m.div>
                   ) : (
-                    <m.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                    <m.div
+                      key="menu"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                    >
                       <Menu size={20} />
                     </m.div>
                   )}
@@ -555,13 +755,38 @@ const Header: React.FC = () => {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 z-40 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
 
-            <m.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 30 }} className="fixed top-16 right-4 w-64 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-xl z-50 md:hidden overflow-hidden" role="menu" aria-label="Navigation mobile">
+            <m.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="fixed top-16 right-4 w-64 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-xl z-50 md:hidden overflow-hidden"
+              role="menu"
+              aria-label="Navigation mobile"
+            >
               <nav className="p-4 space-y-2">
                 {filteredNavItems.map((item, index) => (
-                  <m.div key={item.name} initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: index * 0.05 }}>
-                    <Link href={item.href} target={item.target} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                  <m.div
+                    key={item.name}
+                    initial={{ x: 24, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Link
+                      href={item.href}
+                      target={item.target}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                    >
                       <span className="text-indigo-600">{item.icon}</span>
                       <span className="font-medium">{item.name}</span>
                     </Link>

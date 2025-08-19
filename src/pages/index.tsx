@@ -14,12 +14,9 @@ const OverlayImage = dynamic(() => import("@/components/pixel/OverlayImage"), {
   ssr: false,
 });
 
-const PixelInformations = dynamic(
-  () => import("@/components/infos/PixelInfo"),
-  {
-    ssr: false,
-  },
-);
+const PixelInformations = dynamic(() => import("@/components/PixelInfo"), {
+  ssr: false,
+});
 
 const OverlayControlsImage = dynamic(
   () => import("@/components/settings/OverlayControlsImage"),
@@ -113,32 +110,6 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black">
       <Header />
-
-      {/* Arrière-plan décoratif moderne */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* Grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: "20px 20px",
-          }}
-        />
-
-        {/* Subtle animated gradient orbs */}
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-500/10 dark:bg-blue-400/5 rounded-full blur-3xl animate-float" />
-        <div
-          className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/10 dark:bg-purple-400/5 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "2s" }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-green-500/5 dark:bg-green-400/3 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "4s" }}
-        />
-      </div>
 
       <main className="relative z-10 flex flex-col min-h-screen">
         {/* Overlay pour mobile quand sidebar ouverte */}
@@ -317,10 +288,7 @@ const HomePage: React.FC = () => {
           </div>
 
           {/* Sidebar Droite - Stats/Informations avec design moderne et responsivité */}
-          {(showPixelInfos ||
-            showNavInfo ||
-            showPixelCount ||
-            showAdminPanel) && (
+          {(showNavInfo || showPixelCount || showAdminPanel) && (
             <aside
               className="fixed top-16 right-0 bottom-0 w-80 md:w-96 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl
               border-l border-gray-200/60 dark:border-gray-700/60 overflow-y-auto overflow-x-hidden shadow-2xl transition-all duration-500
@@ -364,25 +332,6 @@ const HomePage: React.FC = () => {
               </div>
 
               <div className="p-4 md:p-6 space-y-6 md:space-y-8">
-                {showPixelInfos && (
-                  <div className="group">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          Informations Pixel
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Détails sur le pixel sélectionné
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200/60 dark:border-green-700/60 shadow-lg">
-                      <PixelInformations />
-                    </div>
-                  </div>
-                )}
-
                 {showNavInfo && (
                   <div className="group">
                     <div className="flex items-center justify-between mb-6">
@@ -460,6 +409,11 @@ const HomePage: React.FC = () => {
           )}
         </div>
       </main>
+      {showPixelInfos && (
+        <div className=" my-16 mx-32 p-8 bg-background-secondary shadow-lg rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+          <PixelInformations />
+        </div>
+      )}
 
       <Footer />
     </div>
