@@ -1,5 +1,8 @@
 import { Events, Client, GuildMember } from "discord.js";
 
+const ENV = process.env.NODE_ENV || "development";
+const API_URL = ENV === "production" ? "https://api.pixelwar.fr" : "http://localhost:3000";
+
 const guildMemberRemoveEvent = {
   name: Events.GuildMemberRemove,
   async execute(
@@ -19,7 +22,7 @@ const guildMemberRemoveEvent = {
     }
 
     try {
-      await fetch("http://localhost:3000/api/guildMemberBoostUpdate", {
+      await fetch(`${API_URL}/api/guildMemberBoostUpdate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: newMember.id, boosted: boosted }),
