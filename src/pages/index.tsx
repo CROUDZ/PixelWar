@@ -17,7 +17,6 @@ const PixelInformations = dynamic(() => import("@/components/PixelInfo"), { ssr:
 const OverlayControlsImage = dynamic(() => import("@/components/settings/OverlayControlsImage"), { ssr: false });
 const NavigationOverlay = dynamic(() => import("@/components/infos/NavigationOverlay"), { ssr: false });
 const AdminPanel = dynamic(() => import("@/components/settings/AdminPanel"), { ssr: false });
-const ColorSelectorPanel = dynamic(() => import("@/components/settings/ColorSelectorPanel"), { ssr: false });
 const PixelCount = dynamic(() => import("@/components/infos/PixelCount"), { ssr: false });
 const Banned = dynamic(() => import("@/components/banned"), { ssr: false });
 
@@ -62,12 +61,10 @@ const HomePage: React.FC = () => {
   const [opacity, setOpacity] = useState<number>(0.5);
   const [transform, setTransform] = useState<OverlayTransform>({ x: 0, y: 0, width: 300, height: 300, rotation: 0 });
   const [showPixelCount, setShowPixelCount] = useState<boolean>(false);
-  const [showColorSelector, setShowColorSelector] = useState<boolean>(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminSelectedSize, setAdminSelectedSize] = useState(5);
   const [adminColor, setAdminColor] = useState("#FF0000");
   const [isAdminSelecting, setIsAdminSelecting] = useState(false);
-  const [selectedColor, setSelectedColor] = useState("#FFFFFF"); // Couleur sélectionnée par l'utilisateur
 
   useEffect(() => {
     const updateMobile = () => {
@@ -128,13 +125,11 @@ const HomePage: React.FC = () => {
                 showNavInfo={showNavInfo}
                 showPixelCount={showPixelCount}
                 showAdminPanel={showAdminPanel}
-                showColorSelector={showColorSelector}
                 onToggleOverlayControls={() => setShowOverlayControls((s) => !s)}
                 onTogglePixelInfos={() => setShowPixelInfos((s) => !s)}
                 onToggleNavInfo={() => setShowNavInfo((s) => !s)}
                 onTogglePixelCount={() => setShowPixelCount((s) => !s)}
                 onToggleAdminPanel={() => setShowAdminPanel((s) => !s)}
-                onToggleColorSelector={() => setShowColorSelector((s) => !s)}
                 isAdmin={session?.user?.role === "ADMIN"}
               />
             </div>
@@ -189,7 +184,6 @@ const HomePage: React.FC = () => {
                         ref={canvasApiRef}
                         pixelWidth={100}
                         pixelHeight={100}
-                        selectedColor={selectedColor}
                         onStateChange={setCanvasNavState}
                         showAdminPanelProp={showAdminPanel}
                         adminSelectedSizeProp={adminSelectedSize}
@@ -248,17 +242,6 @@ const HomePage: React.FC = () => {
                         onChangeColor={(c) => setAdminColor(c)}
                         onChangeSelectedSize={(s) => setAdminSelectedSize(s)}
                         onToggleSelecting={(b) => setIsAdminSelecting(b)}
-                      />
-                    </div>
-                  )}
-
-                  {showColorSelector && (
-                    <div>
-                      <ColorSelectorPanel
-                        visible={showColorSelector}
-                        selectedColor={selectedColor}
-                        onClose={() => setShowColorSelector(false)}
-                        onColorChange={(color) => setSelectedColor(color)}
                       />
                     </div>
                   )}

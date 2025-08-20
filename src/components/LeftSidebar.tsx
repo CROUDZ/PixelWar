@@ -12,7 +12,6 @@ import {
   MousePointer,
   BarChart2,
   Shield,
-  Palette,
 } from "lucide-react";
 
 export type LeftSidebarProps = {
@@ -20,14 +19,12 @@ export type LeftSidebarProps = {
   showPixelInfos: boolean;
   showNavInfo: boolean;
   showPixelCount: boolean;
-  showColorSelector: boolean;
   showAdminPanel: boolean;
 
   onToggleOverlayControls: () => void;
   onTogglePixelInfos: () => void;
   onToggleNavInfo: () => void;
   onTogglePixelCount: () => void;
-  onToggleColorSelector: () => void;
   onToggleAdminPanel: () => void;
 
   isAdmin?: boolean;
@@ -53,13 +50,11 @@ export default function LeftSidebar({
   showPixelInfos,
   showNavInfo,
   showPixelCount,
-  showColorSelector,
   showAdminPanel,
   onToggleOverlayControls,
   onTogglePixelInfos,
   onToggleNavInfo,
   onTogglePixelCount,
-  onToggleColorSelector,
   onToggleAdminPanel,
   isAdmin = false,
   className = "",
@@ -73,15 +68,6 @@ export default function LeftSidebar({
       label: showOverlayControls
         ? "Fermer les contrôles"
         : "Contrôles superposition",
-    },
-    {
-      key: "colorSelector",
-      active: showColorSelector,
-      onClick: onToggleColorSelector,
-      icon: Palette,
-      label: showColorSelector
-        ? "Fermer la palette"
-        : "Palette de couleur",
     },
     {
       key: "pixelsInfo",
