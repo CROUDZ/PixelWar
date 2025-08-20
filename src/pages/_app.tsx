@@ -9,6 +9,10 @@ import WSListener from "@/components/WSListener";
 import { EventModeProvider } from "@/context/EventMode";
 import { useEffect } from "react";
 
+const ENV = process.env.NODE_ENV || "development";
+const DOMAIN =
+  ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+
 type AppPropsWithAuth = AppProps & {
   pageProps: {
     session?: Session;
@@ -20,6 +24,8 @@ export default function App({
   pageProps: { session, ...pageProps },
 }: AppPropsWithAuth) {
   useEffect(() => {
+    console.log("[ENV]", ENV, " - DOMAIN:", DOMAIN);
+
     // Vérifier si l'intervalle de capture n'est pas déjà actif
     if (
       typeof window !== "undefined" &&
