@@ -277,7 +277,7 @@ let totalPixels = 0;
 async function initCounter() {
   console.log("Initialisation du compteur de pixels...");
   totalPixels = await prisma.pixelAction.count();
-  logToDiscord(
+  console.log(
     `Le compteur de pixels a été initialisé avec ${totalPixels} pixels.`,
   );
   console.log("Total pixels:", totalPixels);
@@ -343,7 +343,7 @@ class PaletteManager {
 
 (async () => {
   await client.connect();
-  logToDiscord("Connexion à Redis réussie (client)");
+  console.log("Connexion à Redis réussie (client)");
 
   // --- Load canvas snapshot (try binary first via loadFromRedis) ---
   let canvas;
@@ -442,7 +442,7 @@ class PaletteManager {
 
   // --- WebSocket server ---
   wss = new WebSocketServer({ port: PORT }, () => {
-    logToDiscord("WebSocket server démarré sur ws://0.0.0.0:${PORT}");
+    console.log("WebSocket server démarré sur ws://0.0.0.0:${PORT}");
   });
 
   // --- Queue push helper (same logic) ---
@@ -545,7 +545,7 @@ class PaletteManager {
 
   // --- Graceful shutdown ---
   async function gracefulShutdown() {
-    logToDiscord(
+    console.log(
       "Arrêt du serveur - sauvegarde de la grille et vidage de la file Redis...",
     );
     clearInterval(flushInterval);
@@ -554,7 +554,7 @@ class PaletteManager {
       try {
         await flushRedisQueue();
         const remaining = await client.lLen(QUEUE_KEY);
-        logToDiscord("Longueur de la file restante :", remaining);
+        console.log("Longueur de la file restante :", remaining);
         if (remaining === 0) break;
       } catch (e) {
         console.error("Error during shutdown flush attempt:", e);
@@ -564,7 +564,7 @@ class PaletteManager {
 
     try {
       await saveToRedis(canvas);
-      logToDiscord("Grille sauvegardée dans la persistance (binaire).");
+      console.log("Grille sauvegardée dans la persistance (binaire).");
     } catch (e) {
       console.error("Error saving canvas on shutdown:", e);
     }
@@ -573,21 +573,21 @@ class PaletteManager {
       // update legacy JSON too
       const arr = palette.snapshotToArrayStrings(canvas.snapshot());
       await client.set(GRID_KEY, JSON.stringify(arr));
-      logToDiscord("JSON GRID_KEY mis à jour lors de l'arrêt.");
+      console.log("JSON GRID_KEY mis à jour lors de l'arrêt.");
     } catch (e) {
       console.error("Error writing legacy GRID_KEY JSON on shutdown:", e);
     }
 
     try {
       await client.quit();
-      logToDiscord("Déconnexion de Redis réussie.");
+      console.log("Déconnexion de Redis réussie.");
     } catch (e) {
       console.error("Error disconnecting Redis:", e);
     }
 
     try {
       await prisma.$disconnect();
-      logToDiscord("Déconnexion de Prisma réussie.");
+      console.log("Déconnexion de Prisma réussie.");
     } catch (e) {
       console.error("Error disconnecting Prisma:", e);
     }
@@ -786,7 +786,7 @@ class PaletteManager {
           totalPixels,
         });
 
-        logToDiscord(
+        console.log(
           `Mise à jour du pixel diffusée : x=${place.x}, y=${place.y}, couleur=${colorString}, total=${totalPixels}`,
         );
 
@@ -807,12 +807,12 @@ class PaletteManager {
     });
 
     ws.on("error", (err) => {
-      logToDiscord(`Erreur WebSocket sur le socket ${ws._id} : ${err.message}`);
+      console.log(`Erreur WebSocket sur le socket ${ws._id} : ${err.message}`);
     });
   });
 
-  logToDiscord("Serveur prêt.");
+  console.log("Serveur prêt.");
 })().catch((e) => {
-  logToDiscord("Erreur fatale du serveur : " + e.message);
+  console.log("Erreur fatale du serveur : " + e.message);
   process.exit(1);
 });
