@@ -64,12 +64,8 @@ export default async function handler(
           color: true,
           userId: true,
           createdAt: true,
-          user: {
-            select: {
-              name: true,
-              image: true,
-            },
-          },
+          name: true,
+          avatar: true,
         },
         take: limit ? parseInt(limit as string) : undefined,
         skip: offset ? parseInt(offset as string) : undefined,
@@ -83,8 +79,11 @@ export default async function handler(
         color: action.color,
         userId: action.userId,
         createdAt: action.createdAt.toISOString(),
-        userName: action.user?.name || null,
+        name: action.name || null,
+        avatar: action.avatar || null,
       }));
+
+      console.log(transformedData);
 
       res.status(200).json(transformedData);
     } catch (error) {

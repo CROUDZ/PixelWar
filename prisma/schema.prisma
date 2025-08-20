@@ -70,6 +70,8 @@ model PixelAction {
   y         Int
   color     String
   userId    String?
+  name      String?
+  avatar    String?
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)

@@ -471,6 +471,7 @@ class PaletteManager {
       }
 
       console.log(`Flushing ${items.length} item(s) from Redis queue to DB...`);
+      console.log(`Items:`, items.slice(0, 10).map((s) => JSON.parse(s)));
 
       // Trim list
       await client.lTrim(QUEUE_KEY, items.length, -1);
@@ -495,6 +496,8 @@ class PaletteManager {
         y: p.y,
         color: p.color, // color string — we persisted strings to queue
         userId: p.userId ?? null,
+        name: p.name ?? null, // optional name
+        avatar: p.avatar ?? null, // optional avatar
       }));
 
       const userIds = Array.from(
@@ -605,6 +608,8 @@ class PaletteManager {
     const y = Number(data.y);
     const color = data.color; // can be string like "#AABBCC" or number
     const userId = data.userId ?? null;
+    const name = data.name ?? null; // optional name
+    const avatar = data.avatar ?? null;
     const isAdmin = Boolean(data.isAdmin);
     if (
       !Number.isFinite(x) ||
@@ -613,7 +618,7 @@ class PaletteManager {
     )
       return null;
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return null;
-    return { x: Math.trunc(x), y: Math.trunc(y), color, userId, isAdmin };
+    return { x: Math.trunc(x), y: Math.trunc(y), color, userId, isAdmin, name, avatar };
   }
 
   // --- Broadcast helper (keep previous behaviour) ---
@@ -770,6 +775,8 @@ class PaletteManager {
           color: colorString,
           userId: place.userId ?? null,
           isAdmin: place.isAdmin,
+          name: place.name ?? null,
+          avatar: place.avatar ?? null,
           timestamp: now,
         });
 
@@ -783,6 +790,8 @@ class PaletteManager {
           color: colorString,
           userId: key,
           timestamp: now,
+          name: place.name ?? null,
+          avatar: place.avatar ?? null,
           totalPixels,
         });
 

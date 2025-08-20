@@ -11,6 +11,8 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
+import { User } from "lucide-react";
+import Image from "next/image";
 
 interface PixelAction {
   id: string;
@@ -18,14 +20,17 @@ interface PixelAction {
   y: number;
   color: string;
   userId: string;
+  name?: string | null;
+  avatar?: string | null;
   createdAt: string;
 }
 
 interface UserStats {
   userId: string;
-  userName?: string;
+  name?: string;
   pixelCount: number;
   lastActive: string;
+  avatar?: string;
   averagePerMinute: number;
 }
 
@@ -306,6 +311,8 @@ const PixelInfo: React.FC = () => {
         userId: pixel.userId,
         pixelCount: 0,
         lastActive: pixel.createdAt,
+        name: pixel.name || undefined,
+        avatar: pixel.avatar || undefined,
         averagePerMinute: 0,
       };
 
@@ -329,7 +336,7 @@ const PixelInfo: React.FC = () => {
         if (!searchTerm) return true;
         return (
           stats.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          stats.userName?.toLowerCase().includes(searchTerm.toLowerCase())
+          stats.name?.toLowerCase().includes(searchTerm.toLowerCase())
         );
       })
       .sort((a, b) => b.pixelCount - a.pixelCount)
@@ -684,18 +691,28 @@ const PixelInfo: React.FC = () => {
                     key={user.userId}
                     className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-colors ${user.userId === session?.user?.id ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                   >
+                    <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 flex-shrink-0">
+                      {index + 1}
+                    </p>
                     <div
                       className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${index === 0 ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-white" : index === 1 ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white" : index === 2 ? "bg-gradient-to-r from-orange-400 to-red-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}
                     >
-                      {index + 1}
+                      {user.avatar ? (
+                        <Image
+                          src={user.avatar}
+                          alt={user.name || "Avatar"}
+                          width={32}
+                          height={32}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">
-                        {user.userName ||
-                          (user.userId
-                            ? `User ${user.userId.slice(-8)}`
-                            : "User inconnu")}
+                        {user.name || "Utilisateur inconnu"}
                         {user.userId === session?.user?.id && (
                           <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200 px-1 sm:px-2 py-0.5 rounded-full">
                             Vous

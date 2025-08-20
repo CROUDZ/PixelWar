@@ -780,9 +780,12 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           setValidationPixel(null);
           return;
         }
-        
-        const success = sendWS({ type: "placePixel", x, y, color, userId });
-        
+
+        const name = session?.user?.name || "Nom inconnu";
+        const avatar = session?.user?.image || null;
+
+        const success = sendWS({ type: "placePixel", x, y, color, userId, name, avatar });
+
         if (success) {
           // Optimistically update local grid
           if (!gridRef.current) gridRef.current = new Array(dimensions.width * dimensions.height).fill("#FFFFFF");
@@ -797,7 +800,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         setShowValidation(false);
         setValidationPixel(null);
       },
-      [userId, dimensions],
+      [userId, dimensions, session?.user?.name, session?.user?.image],
     );
 
     const handleCancelValidation = useCallback(() => {
