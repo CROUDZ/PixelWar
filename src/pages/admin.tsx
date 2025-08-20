@@ -209,7 +209,7 @@ const AdminPage: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/prisma/adminUpdate", {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: admin.trim() }),
       });
