@@ -45,6 +45,10 @@ sub.subscribe("link", (err, count) => {
   if (err) logToDiscord(`Erreur d'abonnement au canal link : ${err.message}`);
   else logToDiscord(`Abonné au canal link (${count} abonnés).`);
 });
+sub.subscribe("canvas-clear", (err, count) => {
+  if (err) logToDiscord(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
+  else logToDiscord(`Abonné au canal canvas-clear (${count} abonnés).`);
+});
 
 sub.on("message", (channel, message) => {
   logToDiscord(`Message reçu sur le canal ${channel} : ${message}`);
@@ -165,6 +169,72 @@ sub.on("message", (channel, message) => {
     })();
     return;
   }
+
+  if (channel === "canvas-clear") {
+    (async () => {
+      try {
+        const payload = JSON.parse(message);
+        logToDiscord(`[ADMIN] Canvas cleared by admin ${payload.adminId} at ${new Date(payload.timestamp).toISOString()}`);
+        console.log("[server.js] canvas-clear event:", payload);
+
+        // Reset total pixels counter
+        totalPixels = 0;
+
+        // *** IMPORTANT: Reset the server's internal canvas to empty state ***
+        const emptySnap = new Uint8Array(payload.width * payload.height); // All pixels = 0 (default color ID)
+        canvas.restore(emptySnap);
+        
+        // Reset palette to ensure default color is ID 0
+        palette.colorToId.clear();
+        palette.idToColor = [];
+        palette._registerColor(payload.defaultColor);
+        
+        console.log(`[server.js] Internal canvas reset to empty state (${payload.width}x${payload.height})`);
+
+        // Create empty grid with default color for client compatibility
+        const emptyGrid = payload.grid || new Array(payload.width * payload.height).fill(payload.defaultColor);
+
+        // Broadcast canvas clear to all connected clients
+        const clearMessage = {
+          type: "canvasClear",
+          timestamp: payload.timestamp,
+          width: payload.width,
+          height: payload.height,
+          grid: emptyGrid,
+          totalPixels: 0,
+          clearedBy: payload.adminId
+        };
+
+        // Send to all connected websockets
+        if (wss && wss.clients) {
+          for (const client of wss.clients) {
+            if (client.readyState === 1) { // WebSocket.OPEN
+              try {
+                client.send(JSON.stringify(clearMessage));
+              } catch (e) {
+                console.warn("[server.js] Failed to send canvas clear to client:", e);
+              }
+            }
+          }
+          console.log(`[server.js] Canvas clear broadcasted to ${wss.clients.size} clients`);
+        } else {
+          console.warn("[server.js] WebSocket server not ready, cannot broadcast canvas clear");
+        }
+        
+        // Immediately save the empty state to Redis to ensure persistence
+        try {
+          await saveToRedis(canvas);
+          console.log("[server.js] Empty canvas state saved to Redis persistence");
+        } catch (e) {
+          console.error("[server.js] Failed to save empty canvas to Redis:", e);
+        }
+        
+      } catch (e) {
+        console.error("[server.js] invalid canvas-clear payload or error:", e);
+      }
+    })();
+    return;
+  }
 });
 
 // --- Prisma ---
@@ -172,6 +242,9 @@ const prisma = new PrismaClient();
 
 // --- User sockets map (identique à ton code) ---
 const userSockets = new Map();
+
+// --- Global WebSocket server reference ---
+let wss = null;
 
 // helpers add/remove user sockets (copiés)
 function addUserSocket(userId, ws) {
@@ -370,7 +443,7 @@ class PaletteManager {
   }
 
   // --- WebSocket server ---
-  const wss = new WebSocketServer({ port: PORT }, () => {
+  wss = new WebSocketServer({ port: PORT }, () => {
     logToDiscord("WebSocket server démarré sur ws://0.0.0.0:${PORT}");
   });
 
@@ -573,6 +646,7 @@ class PaletteManager {
           height: HEIGHT,
           grid: gridStr,
           totalPixels,
+          timestamp: Date.now(),
         }),
       );
     } catch (e) {
@@ -585,6 +659,16 @@ class PaletteManager {
         data = JSON.parse(msg.toString());
       } catch (e) {
         console.warn("Invalid JSON from client:", ws._id, msg.toString(), e);
+        return;
+      }
+
+      // Handle heartbeat ping
+      if (data.type === "ping") {
+        try {
+          ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+        } catch (e) {
+          console.error(`[WS ${ws._id}] Error sending pong:`, e);
+        }
         return;
       }
 
@@ -612,6 +696,26 @@ class PaletteManager {
           }
         } catch (e) {
           console.error("[WS] auth handling error:", e);
+        }
+        return;
+      }
+
+      // Handle request for resync
+      if (data.type === "requestInit") {
+        try {
+          const gridStr = palette.snapshotToArrayStrings(canvas.snapshot());
+          ws.send(
+            JSON.stringify({
+              type: "init",
+              width: WIDTH,
+              height: HEIGHT,
+              grid: gridStr,
+              totalPixels,
+              timestamp: Date.now(),
+            }),
+          );
+        } catch (e) {
+          console.error(`[WS ${ws._id}] Error sending resync:`, e);
         }
         return;
       }

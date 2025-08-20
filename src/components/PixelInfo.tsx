@@ -719,96 +719,6 @@ const PixelInfo: React.FC = () => {
                 ))
               )}
             </div>
-          </div>
-        )}
-
-        {viewMode === "heatmap" && (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="glass-panel p-3 sm:p-4 lg:p-6">
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 text-center">
-                🔥 Carte Thermique
-              </h3>
-              <div
-                className="relative bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden mx-auto max-w-md sm:max-w-lg lg:max-w-xl"
-                style={{ aspectRatio: "1" }}
-              >
-                <svg
-                  width="100%"
-                  height="100%"
-                  viewBox="0 0 100 100"
-                  className="w-full h-full"
-                >
-                  {heatmapData.data.map((cell, index) => (
-                    <rect
-                      key={index}
-                      x={cell.coordinates.startX}
-                      y={cell.coordinates.startY}
-                      width={cell.coordinates.endX - cell.coordinates.startX}
-                      height={cell.coordinates.endY - cell.coordinates.startY}
-                      fill={`rgba(255, ${Math.floor(255 - cell.intensity * 200)}, ${Math.floor(255 - cell.intensity * 255)}, ${0.3 + cell.intensity * 0.7})`}
-                      stroke="rgba(255,255,255,0.1)"
-                      strokeWidth="0.2"
-                    />
-                  ))}
-
-                  {heatmapData.hotspots.slice(0, 3).map((hotspot, index) => (
-                    <g key={`hotspot-${index}`}>
-                      <circle
-                        cx={
-                          hotspot.coordinates.startX +
-                          (hotspot.coordinates.endX -
-                            hotspot.coordinates.startX) /
-                            2
-                        }
-                        cy={
-                          hotspot.coordinates.startY +
-                          (hotspot.coordinates.endY -
-                            hotspot.coordinates.startY) /
-                            2
-                        }
-                        r="2"
-                        fill="yellow"
-                        stroke="orange"
-                        strokeWidth="0.5"
-                        className="animate-pulse"
-                      />
-                      <text
-                        x={
-                          hotspot.coordinates.startX +
-                          (hotspot.coordinates.endX -
-                            hotspot.coordinates.startX) /
-                            2
-                        }
-                        y={
-                          hotspot.coordinates.startY +
-                          (hotspot.coordinates.endY -
-                            hotspot.coordinates.startY) /
-                            2 -
-                          3
-                        }
-                        textAnchor="middle"
-                        fill="white"
-                        fontSize="3"
-                        fontWeight="bold"
-                      >
-                        #{hotspot.rank}
-                      </text>
-                    </g>
-                  ))}
-                </svg>
-
-                <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 glass-panel p-1 sm:p-2 text-[10px] sm:text-xs">
-                  <div className="flex items-center space-x-1 sm:space-x-2">
-                    <span className="hidden sm:inline">Faible</span>
-                    <span className="sm:hidden">F</span>
-                    <div className="w-8 sm:w-12 h-2 sm:h-3 bg-gradient-to-r from-blue-400 to-red-500 rounded"></div>
-                    <span className="hidden sm:inline">Intense</span>
-                    <span className="sm:hidden">I</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className="glass-panel p-3 sm:p-4 lg:p-6">
               <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">
                 🎯 Zones les Plus Actives
@@ -947,6 +857,95 @@ const PixelInfo: React.FC = () => {
                   </div>
                   <div className="text-[10px] sm:text-sm text-gray-400 leading-tight">
                     Actifs (1h)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {viewMode === "heatmap" && (
+          <div className="space-y-4 sm:space-y-6">
+            <div className="glass-panel p-3 sm:p-4 lg:p-6">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 text-center">
+                🔥 Carte Thermique
+              </h3>
+              <div
+                className="relative bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden mx-auto max-w-md sm:max-w-lg lg:max-w-xl"
+                style={{ aspectRatio: "1" }}
+              >
+                <svg
+                  width="100%"
+                  height="100%"
+                  viewBox="0 0 100 100"
+                  className="w-full h-full"
+                >
+                  {heatmapData.data.map((cell, index) => (
+                    <rect
+                      key={index}
+                      x={cell.coordinates.startX}
+                      y={cell.coordinates.startY}
+                      width={cell.coordinates.endX - cell.coordinates.startX}
+                      height={cell.coordinates.endY - cell.coordinates.startY}
+                      fill={`rgba(255, ${Math.floor(255 - cell.intensity * 200)}, ${Math.floor(255 - cell.intensity * 255)}, ${0.3 + cell.intensity * 0.7})`}
+                      stroke="rgba(255,255,255,0.1)"
+                      strokeWidth="0.2"
+                    />
+                  ))}
+
+                  {heatmapData.hotspots.slice(0, 3).map((hotspot, index) => (
+                    <g key={`hotspot-${index}`}>
+                      <circle
+                        cx={
+                          hotspot.coordinates.startX +
+                          (hotspot.coordinates.endX -
+                            hotspot.coordinates.startX) /
+                            2
+                        }
+                        cy={
+                          hotspot.coordinates.startY +
+                          (hotspot.coordinates.endY -
+                            hotspot.coordinates.startY) /
+                            2
+                        }
+                        r="2"
+                        fill="yellow"
+                        stroke="orange"
+                        strokeWidth="0.5"
+                        className="animate-pulse"
+                      />
+                      <text
+                        x={
+                          hotspot.coordinates.startX +
+                          (hotspot.coordinates.endX -
+                            hotspot.coordinates.startX) /
+                            2
+                        }
+                        y={
+                          hotspot.coordinates.startY +
+                          (hotspot.coordinates.endY -
+                            hotspot.coordinates.startY) /
+                            2 -
+                          3
+                        }
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize="3"
+                        fontWeight="bold"
+                      >
+                        #{hotspot.rank}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+
+                <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 glass-panel p-1 sm:p-2 text-[10px] sm:text-xs">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <span className="hidden sm:inline">Faible</span>
+                    <span className="sm:hidden">F</span>
+                    <div className="w-8 sm:w-12 h-2 sm:h-3 bg-gradient-to-r from-blue-400 to-red-500 rounded"></div>
+                    <span className="hidden sm:inline">Intense</span>
+                    <span className="sm:hidden">I</span>
                   </div>
                 </div>
               </div>

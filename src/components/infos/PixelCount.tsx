@@ -47,6 +47,11 @@ export default function PixelInformations() {
       } else if (wsData.type === "updatePixel") {
         setCount((c) => c + 1);
         timestampsRef.current.push(Date.now());
+      } else if (wsData.type === "canvasClear") {
+        setCount(0);
+        timestampsRef.current = []; // Reset rate calculation
+        setRate(0);
+        console.log("[PixelCount] Canvas cleared, reset pixel count");
       }
     });
 

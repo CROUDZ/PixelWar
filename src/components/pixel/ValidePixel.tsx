@@ -39,6 +39,8 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   const [color, setColor] = useState(initialColor);
   const [remainingTime, setRemainingTime] = useState(0);
 
+  console.log("[ValidePixel] Initial color:", initialColor, "Current color:", color);
+
   const { data: session, status } = useSession();
   const { isActive, startTime, endTime } = useEventMode();
 
@@ -87,12 +89,16 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   }, [session]);
 
   const handleValidate = () => {
+    console.log("[ValidePixel] Validating pixel with color:", color);
     if (!session) {
-      openInPopup("http://localhost:3000/auth/discord-redirect");
+      openInPopup(
+        `http://${window.location.host}/auth/discord-redirect`
+      );
       return;
     }
     if (!session.user.linked) {
-      openInPopup("http://localhost:3000/link");
+      console.warn("[ValidePixel] User not linked, redirecting to link page.");
+      openInPopup(`http://${window.location.host}/link`);
       return;
     }
 
@@ -305,7 +311,13 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
                   Couleur
                 </label>
               </div>
-              <PixelSelector onSelect={setColor} valide={true} />
+              <PixelSelector 
+                onSelect={(newColor) => {
+                  console.log("[ValidePixel] Color changed to:", newColor);
+                  setColor(newColor);
+                }} 
+                initial={color} 
+              />
             </div>
 
             {/* Aperçu du pixel */}

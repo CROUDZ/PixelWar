@@ -4,6 +4,8 @@ export const openInPopup = (url: string) => {
   const left = (window.screen.width - width) / 2;
   const top = (window.screen.height - height) / 2;
 
+  console.log("[openInPopup] Opening URL:", url);
+
   const popup = window.open(
     url,
     "discordSignInPopup",

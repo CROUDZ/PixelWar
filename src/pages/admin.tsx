@@ -20,6 +20,127 @@ type User = {
   global_name?: string;
 };
 
+// Component for clearing the canvas - DANGEROUS OPERATION
+const ClearCanvasButton: React.FC = () => {
+  const [isClearing, setIsClearing] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [clearMessage, setClearMessage] = useState("");
+
+  const handleClearCanvas = async () => {
+    if (confirmationText !== "SUPPRIMER TOUT") {
+      setClearMessage("Veuillez taper exactement 'SUPPRIMER TOUT' pour confirmer");
+      return;
+    }
+
+    setIsClearing(true);
+    setClearMessage("");
+
+    try {
+      const response = await fetch("/api/clear-canvas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          confirmationToken: "CLEAR_CANVAS_CONFIRM",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setClearMessage(`✅ Toile nettoyée avec succès ! Opération effectuée par ${data.clearedBy} à ${new Date(data.timestamp).toLocaleString()}`);
+        setShowConfirmation(false);
+        setConfirmationText("");
+      } else {
+        setClearMessage(`❌ Erreur: ${data.error}`);
+      }
+    } catch (error) {
+      setClearMessage(`❌ Erreur de réseau: ${error}`);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const cancelClear = () => {
+    setShowConfirmation(false);
+    setConfirmationText("");
+    setClearMessage("");
+  };
+
+  if (showConfirmation) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-4">
+            🚨 CONFIRMATION FINALE REQUISE
+          </h3>
+          <p className="text-red-700 dark:text-red-300 mb-4">
+            Pour confirmer que vous voulez vraiment supprimer TOUTE la toile et son historique, 
+            tapez exactement <strong>"SUPPRIMER TOUT"</strong> (sans les guillemets) dans le champ ci-dessous :
+          </p>
+          <input
+            type="text"
+            value={confirmationText}
+            onChange={(e) => setConfirmationText(e.target.value)}
+            placeholder="Tapez SUPPRIMER TOUT"
+            className="w-full px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-red-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleClearCanvas}
+            disabled={isClearing || confirmationText !== "SUPPRIMER TOUT"}
+            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors"
+          >
+            {isClearing ? "🔄 Nettoyage en cours..." : "🗑️ CONFIRMER LA SUPPRESSION"}
+          </button>
+          <button
+            onClick={cancelClear}
+            disabled={isClearing}
+            className="px-6 py-3 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors"
+          >
+            Annuler
+          </button>
+        </div>
+
+        {clearMessage && (
+          <div className={`p-4 rounded-xl border ${
+            clearMessage.includes("✅") 
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+              : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+          }`}>
+            {clearMessage}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={() => setShowConfirmation(true)}
+        className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors border-2 border-red-500 shadow-lg"
+      >
+        🗑️ NETTOYER COMPLÈTEMENT LA TOILE
+      </button>
+
+      {clearMessage && (
+        <div className={`p-4 rounded-xl border ${
+          clearMessage.includes("✅") 
+            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+        }`}>
+          {clearMessage}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminPage: React.FC = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -668,6 +789,67 @@ const AdminPage: React.FC = () => {
               {endTime ? endTime.toString() : "Non définie"}
             </p>
           </div>
+        </div>
+
+        {/* Nettoyage de la toile - DANGER ZONE */}
+        <div className="glass-panel rounded-3xl p-8 border-2 border-red-300 dark:border-red-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-red-600 dark:text-red-400">
+                Zone Dangereuse - Nettoyage de la Toile
+              </h2>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                ⚠️ Cette action est IRRÉVERSIBLE et supprimera TOUS les pixels
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-6 h-6 text-red-500 mt-0.5 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+              <div>
+                <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
+                  Attention : Action Critique
+                </h3>
+                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  <li>• Supprime TOUS les pixels de la toile</li>
+                  <li>• Efface TOUT l'historique des actions de pixels</li>
+                  <li>• Vide la queue Redis des pixels en attente</li>
+                  <li>• Remet la toile à l'état vierge (couleur par défaut)</li>
+                  <li>• Cette action ne peut PAS être annulée</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <ClearCanvasButton />
         </div>
 
         {/* Liste des utilisateurs */}

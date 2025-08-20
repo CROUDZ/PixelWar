@@ -17,11 +17,7 @@ export default function WSListener() {
       return;
     }
 
-    // Construire l'URL WS depuis la config (ou fallback localhost)
-    // Définis NEXT_PUBLIC_WS_URL = ws://example.com:8080 (ou wss://...) dans .env
-    const WS_URL =
-      (process.env.NEXT_PUBLIC_WS_URL as string) ||
-      `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:8080`;
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
 
     console.log("[WSListener] creating WS ->", WS_URL);
 

@@ -33,7 +33,6 @@ const blackCursor = [
 
 interface PixelSelectorProps {
   onSelect: (color: string) => void;
-  valide?: boolean; // si true on montre un bouton de validation
   initial?: string | null; // couleur initiale
 }
 
@@ -68,7 +67,6 @@ const contrastTextColor = (hex: string) =>
 
 export default function PixelSelector({
   onSelect,
-  valide = false,
   initial = null,
 }: PixelSelectorProps) {
   const [selected, setSelected] = useState<string | null>(initial);
@@ -91,8 +89,9 @@ export default function PixelSelector({
   const handleSelect = (color: string) => {
     // Only update and notify if the color actually changed
     if (color !== selected) {
+      console.log("[PixelSelector] Color selected:", color);
       setSelected(color);
-      if (!valide) onSelect(color); // si pas de validation explicite, on notifie tout de suite
+      onSelect(color); // Toujours notifier la sélection, indépendamment du mode valide
     }
   };
 

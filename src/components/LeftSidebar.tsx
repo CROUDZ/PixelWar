@@ -1,4 +1,7 @@
-// components/ui/LeftSidebar.tsx
+
+
+// components/ui/LeftSidebar.tsx (amélioration responsive)
+
 "use client";
 import React from "react";
 import { m, AnimatePresence } from "framer-motion";
@@ -9,6 +12,7 @@ import {
   MousePointer,
   BarChart2,
   Shield,
+  Palette,
 } from "lucide-react";
 
 export type LeftSidebarProps = {
@@ -16,12 +20,14 @@ export type LeftSidebarProps = {
   showPixelInfos: boolean;
   showNavInfo: boolean;
   showPixelCount: boolean;
+  showColorSelector: boolean;
   showAdminPanel: boolean;
 
   onToggleOverlayControls: () => void;
   onTogglePixelInfos: () => void;
   onToggleNavInfo: () => void;
   onTogglePixelCount: () => void;
+  onToggleColorSelector: () => void;
   onToggleAdminPanel: () => void;
 
   isAdmin?: boolean;
@@ -47,11 +53,13 @@ export default function LeftSidebar({
   showPixelInfos,
   showNavInfo,
   showPixelCount,
+  showColorSelector,
   showAdminPanel,
   onToggleOverlayControls,
   onTogglePixelInfos,
   onToggleNavInfo,
   onTogglePixelCount,
+  onToggleColorSelector,
   onToggleAdminPanel,
   isAdmin = false,
   className = "",
@@ -65,6 +73,15 @@ export default function LeftSidebar({
       label: showOverlayControls
         ? "Fermer les contrôles"
         : "Contrôles superposition",
+    },
+    {
+      key: "colorSelector",
+      active: showColorSelector,
+      onClick: onToggleColorSelector,
+      icon: Palette,
+      label: showColorSelector
+        ? "Fermer la palette"
+        : "Palette de couleur",
     },
     {
       key: "pixelsInfo",
@@ -108,7 +125,7 @@ export default function LeftSidebar({
             return (
               <m.button
                 key={b.key}
-                className={`group relative flex items-center justify-center md:w-12 md:h-12 w-14 h-12 rounded-xl
+                className={`group relative flex items-center justify-center md:w-12 md:h-12 w-11 h-11 rounded-xl
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-400 text-text-primary
                   ${b.active ? "bg-blue-500/95 text-white shadow-lg" : "bg-white/6 text-white/90 hover:bg-white/10"}
                   transition-colors`}
@@ -146,7 +163,7 @@ export default function LeftSidebar({
           {isAdmin && (
             <m.button
               key="admin"
-              className={`group relative flex items-center justify-center md:w-12 md:h-12 w-14 h-12 rounded-xl
+              className={`group relative flex items-center justify-center md:w-12 md:h-12 w-11 h-11 rounded-xl
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-400
                 ${showAdminPanel ? "bg-rose-500/95 text-white shadow-lg" : "bg-white/6 text-white/90 hover:bg-white/10"}
                 transition-colors`}
