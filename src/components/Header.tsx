@@ -31,6 +31,9 @@ import {
   Calendar,
 } from "lucide-react";
 
+const ENV = process.env.NODE_ENV || "development";
+const DOMAIN = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+
 interface NavItem {
   name: string;
   href: string;
@@ -462,7 +465,7 @@ const Header: React.FC = () => {
                               <button
                                 onClick={() =>
                                   openInPopup(
-                                    `http://${window.location.host}/auth/discord-redirect`,
+                                    `${DOMAIN}/auth/discord-redirect`,
                                   )
                                 }
                                 className="w-full flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
@@ -704,7 +707,7 @@ const Header: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() =>
-                    openInPopup(`http://${window.location.host}/auth/discord-redirect`)
+                    openInPopup(`${DOMAIN}/auth/discord-redirect`)
                   }
                   className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-md transition"
                 >

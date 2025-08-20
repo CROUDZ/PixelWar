@@ -1,7 +1,7 @@
 import { Events, Client, GuildMember } from "discord.js";
 
 const ENV = process.env.NODE_ENV || "development";
-const API_URL = ENV === "production" ? "https://api.pixelwar.fr" : "http://localhost:3000";
+const API_URL = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
 
 const guildMemberRemoveEvent = {
   name: Events.GuildMemberRemove,

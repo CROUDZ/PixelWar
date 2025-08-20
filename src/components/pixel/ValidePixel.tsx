@@ -15,6 +15,9 @@ import { useSession } from "next-auth/react";
 import { useEventMode } from "@/context/EventMode";
 import { openInPopup } from "@/lib/utils";
 
+const ENV = process.env.NODE_ENV || "development";
+const DOMAIN = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+
 interface ValidePixelProps {
   initialX: number;
   initialY: number;
@@ -92,13 +95,13 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
     console.log("[ValidePixel] Validating pixel with color:", color);
     if (!session) {
       openInPopup(
-        `http://${window.location.host}/auth/discord-redirect`
+        `${DOMAIN}/auth/discord-redirect`
       );
       return;
     }
     if (!session.user.linked) {
       console.warn("[ValidePixel] User not linked, redirecting to link page.");
-      openInPopup(`http://${window.location.host}/link`);
+      openInPopup(`${DOMAIN}/link`);
       return;
     }
 
