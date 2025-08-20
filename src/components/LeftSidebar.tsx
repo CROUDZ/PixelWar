@@ -1,5 +1,3 @@
-
-
 // components/ui/LeftSidebar.tsx (amélioration responsive)
 
 "use client";
@@ -13,6 +11,7 @@ import {
   BarChart2,
   Shield,
 } from "lucide-react";
+import Link from "next/link";
 
 export type LeftSidebarProps = {
   showOverlayControls: boolean;
@@ -28,6 +27,7 @@ export type LeftSidebarProps = {
   onToggleAdminPanel: () => void;
 
   isAdmin?: boolean;
+  A2F: boolean; // Ajout de la vérification A2F
   className?: string;
 };
 
@@ -57,6 +57,7 @@ export default function LeftSidebar({
   onTogglePixelCount,
   onToggleAdminPanel,
   isAdmin = false,
+  A2F, // Ajout de la vérification A2F
   className = "",
 }: LeftSidebarProps) {
   const buttons = [
@@ -146,39 +147,66 @@ export default function LeftSidebar({
             );
           })}
 
-          {isAdmin && (
-            <m.button
-              key="admin"
-              className={`group relative flex items-center justify-center md:w-12 md:h-12 w-11 h-11 rounded-xl
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-400
-                ${showAdminPanel ? "bg-rose-500/95 text-white shadow-lg" : "bg-white/6 text-white/90 hover:bg-white/10"}
-                transition-colors`}
-              onClick={onToggleAdminPanel}
-              aria-pressed={showAdminPanel}
-              title={showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}
-              initial="idle"
-              whileHover="hover"
-              whileTap="active"
-              variants={btnVariants}
-            >
-              <m.span
-                animate={
-                  showAdminPanel ? { scale: 1.06, rotate: -8 } : { scale: 1 }
+          {isAdmin &&
+            (A2F ? (
+              <m.button
+                key="admin"
+                className={`group relative flex items-center justify-center md:w-12 md:h-12 w-11 h-11 rounded-xl
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-400
+                  ${
+                    showAdminPanel
+                      ? "bg-rose-500/95 text-white shadow-lg"
+                      : "bg-white/6 text-white/90 hover:bg-white/10"
+                  }
+                  transition-colors`}
+                onClick={onToggleAdminPanel}
+                aria-pressed={showAdminPanel}
+                title={
+                  showAdminPanel ? "Masquer panneau admin" : "Panneau admin"
+                }
+                initial="idle"
+                whileHover="hover"
+                whileTap="active"
+                variants={btnVariants}
+              >
+                <m.span
+                  animate={
+                    showAdminPanel ? { scale: 1.06, rotate: -8 } : { scale: 1 }
+                  }
+                >
+                  {showAdminPanel ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Shield className="w-5 h-5 text-rose-500" />
+                  )}
+                </m.span>
+                <div className="hidden md:block">
+                  <Tooltip>
+                    {showAdminPanel
+                      ? "Masquer panneau admin"
+                      : "Panneau admin"}
+                  </Tooltip>
+                </div>
+              </m.button>
+            ) : (
+              <Link
+                key="admin"
+                className={`group relative flex items-center justify-center md:w-12 md:h-12 w-11 h-11 rounded-xl
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-400
+                  ${
+                    showAdminPanel
+                      ? "bg-rose-500/95 text-white shadow-lg"
+                      : "bg-white/6 text-white/90 hover:bg-white/10"
+                  }
+                  transition-colors`}
+                href="/admin"
+                title={
+                  showAdminPanel ? "Masquer panneau admin" : "Panneau admin"
                 }
               >
-                {showAdminPanel ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Shield className="w-5 h-5 text-rose-500" />
-                )}
-              </m.span>
-              <div className="hidden md:block">
-                <Tooltip>
-                  {showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}
-                </Tooltip>
-              </div>
-            </m.button>
-          )}
+                <Shield className="w-5 h-5 text-rose-500" />
+              </Link>
+            ))}
         </AnimatePresence>
       </div>
     </m.aside>

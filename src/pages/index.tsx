@@ -96,6 +96,8 @@ const HomePage: React.FC = () => {
     return <Banned reason="Violation des règles" duration="Indéfinie" />;
   }
 
+  console.log("[HomePage] Rendered with session:", session);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black">
       <Header />
@@ -131,6 +133,7 @@ const HomePage: React.FC = () => {
                 onTogglePixelCount={() => setShowPixelCount((s) => !s)}
                 onToggleAdminPanel={() => setShowAdminPanel((s) => !s)}
                 isAdmin={session?.user?.role === "ADMIN"}
+                A2F={session?.user?.twoFA ?? false} // Ajout de la vérification A2F avec une valeur par défaut
               />
             </div>
           </div>
