@@ -9,7 +9,6 @@ import { PrismaClient } from "@prisma/client";
 import IORedis from "ioredis";
 import { PixelCanvas } from "./pixel-canvas.js";
 import { loadFromRedis, saveToRedis } from "./persistence-redis.js";
-import { logToDiscord } from "../bot/dist/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,32 +30,32 @@ const HEIGHT = Number(process.env.GRID_HEIGHT || 100);
 // --- Clients Redis ---
 const redisUrl = process.env.REDIS_URL || undefined;
 const client = redis.createClient(redisUrl ? { url: redisUrl } : {});
-client.on("error", (e) => logToDiscord(`Erreur client Redis : ${e.message}`));
+client.on("error", (e) => console.error(`Erreur client Redis : ${e.message}`));
 
 const sub = new IORedis(redisUrl);
-sub.on("error", (e) => logToDiscord(`Erreur ioredis (sub) : ${e.message}`));
+sub.on("error", (e) => console.error(`Erreur ioredis (sub) : ${e.message}`));
 
 // subscribe channels already used in your code
 sub.subscribe("logout", (err, count) => {
-  if (err) logToDiscord(`Erreur d'abonnement au canal logout : ${err.message}`);
-  else logToDiscord(`Abonné au canal logout (${count} abonnés).`);
+  if (err) console.error(`Erreur d'abonnement au canal logout : ${err.message}`);
+  else console.log(`Abonné au canal logout (${count} abonnés).`);
 });
 sub.subscribe("link", (err, count) => {
-  if (err) logToDiscord(`Erreur d'abonnement au canal link : ${err.message}`);
-  else logToDiscord(`Abonné au canal link (${count} abonnés).`);
+  if (err) console.error(`Erreur d'abonnement au canal link : ${err.message}`);
+  else console.log(`Abonné au canal link (${count} abonnés).`);
 });
 sub.subscribe("canvas-clear", (err, count) => {
-  if (err) logToDiscord(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
-  else logToDiscord(`Abonné au canal canvas-clear (${count} abonnés).`);
+  if (err) console.error(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
+  else console.log(`Abonné au canal canvas-clear (${count} abonnés).`);
 });
 
 sub.on("message", (channel, message) => {
-  logToDiscord(`Message reçu sur le canal ${channel} : ${message}`);
+  console.log(`Message reçu sur le canal ${channel} : ${message}`);
   // --- leave your existing handlers unchanged (copié depuis ton code) ---
   if (channel === "logout") {
     try {
       const { userId } = JSON.parse(message);
-      logToDiscord(`L'utlilisateur avec l'ID ${userId} s'est déconnecté.`);
+      console.log(`L'utlilisateur avec l'ID ${userId} s'est déconnecté.`);
       // Log to console
       console.log("[server.js] logout event for userId:", userId);
 
@@ -87,7 +86,7 @@ sub.on("message", (channel, message) => {
       try {
         const payload = JSON.parse(message);
         const discordId = String(payload.userId);
-        logToDiscord(`L'utilisateur avec l'ID Discord ${discordId} a été lié.`);
+        console.log(`L'utilisateur avec l'ID Discord ${discordId} a été lié.`);
         console.log(
           "[server.js] link event for discordId:",
           discordId,
@@ -174,7 +173,6 @@ sub.on("message", (channel, message) => {
     (async () => {
       try {
         const payload = JSON.parse(message);
-        logToDiscord(`[ADMIN] Canvas cleared by admin ${payload.adminId} at ${new Date(payload.timestamp).toISOString()}`);
         console.log("[server.js] canvas-clear event:", payload);
 
         // Reset total pixels counter
@@ -277,7 +275,7 @@ function removeUserSocket(ws) {
 // --- metrics & init ---
 let totalPixels = 0;
 async function initCounter() {
-  logToDiscord("Initialisation du compteur de pixels...");
+  console.log("Initialisation du compteur de pixels...");
   totalPixels = await prisma.pixelAction.count();
   logToDiscord(
     `Le compteur de pixels a été initialisé avec ${totalPixels} pixels.`,
