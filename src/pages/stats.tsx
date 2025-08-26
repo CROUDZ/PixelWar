@@ -1,11 +1,11 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
-const Header = dynamic(() => import("../components/Header"), {
+const Header = dynamic(() => import("../components/layout/Header"), {
   ssr: false,
 });
 
-const PixelInfo = dynamic(() => import("../components/PixelInfo"), {
+const PixelInfo = dynamic(() => import("../components/layout/PixelInfo"), {
   ssr: false,
 });
 

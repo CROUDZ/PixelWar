@@ -5,7 +5,7 @@ import React from "react";
 import { m, AnimatePresence } from "framer-motion";
 import {
   X,
-  Settings,
+  Image,
   BarChart,
   MousePointer,
   BarChart2,
@@ -65,10 +65,10 @@ export default function LeftSidebar({
       key: "overlay",
       active: showOverlayControls,
       onClick: onToggleOverlayControls,
-      icon: Settings,
+      icon: Image,
       label: showOverlayControls
-        ? "Fermer les contrôles"
-        : "Contrôles superposition",
+        ? "Fermer la superposition d'images"
+        : "Superposition d'images",
     },
     {
       key: "pixelsInfo",

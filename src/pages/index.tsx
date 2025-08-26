@@ -6,18 +6,21 @@ import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import type { PixelCanvasHandle } from "@/components/pixel/PixelCanvas"; // ajuste si nécessaire
-import Header from "@/components/Header";
-import LeftSidebar from "@/components/LeftSidebar";
-import Footer from "@/components/Footer";
+import Header from "@/components/layout/Header";
+import LeftSidebar from "@/components/layout/LeftSidebar";
+import Footer from "@/components/layout/Footer";
 import NotificationContainer from "@/components/NotificationContainer";
 import PixelCanvas from "@/components/pixel/PixelCanvas";
 
 const OverlayImage = dynamic(() => import("@/components/pixel/OverlayImage"), {
   ssr: false,
 });
-const PixelInformations = dynamic(() => import("@/components/PixelInfo"), {
-  ssr: false,
-});
+const PixelInformations = dynamic(
+  () => import("@/components/layout/PixelInfo"),
+  {
+    ssr: false,
+  },
+);
 const OverlayControlsImage = dynamic(
   () => import("@/components/settings/OverlayControlsImage"),
   { ssr: false },
@@ -114,6 +117,14 @@ const HomePage: React.FC = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Fonction de reset pour remettre la vue à l'état initial
+  const handleResetGrid = () => {
+    if (canvasApiRef.current) {
+      canvasApiRef.current.resetView();
+      console.log("[HomePage] (FR) Vue du canvas réinitialisée");
+    }
+  };
+
   if (session?.user?.banned) {
     console.log(
       "[HomePage] (FR) Utilisateur banni, affichage du composant Banned",
@@ -150,9 +161,9 @@ const HomePage: React.FC = () => {
           />
         )}
 
-        <div className="flex w-full">
+        <div className="flex w-full justify-center items-center">
           {/* Barre latérale gauche : mobile -> barre flottante en bas, md+ -> verticale fixe */}
-          <div className="md:fixed md:left-4 md:top-1/3 z-50 pointer-events-auto">
+          <div className="z-50 pointer-events-auto">
             <div className="w-full md:w-20">
               <LeftSidebar
                 showOverlayControls={showOverlayControls}
@@ -205,25 +216,11 @@ const HomePage: React.FC = () => {
           <div className="flex-1 flex justify-center items-center w-full px-4 md:px-12 py-6">
             {/* Side panel (left) - slide-in on md+ */}
             {showOverlayControls && (
-              <aside className="hidden md:block fixed top-16 left-28 bottom-8 w-72 lg:w-96 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform duration-300 z-40 rounded-lg">
-                <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 p-4 md:p-6 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg md:text-xl font-bold">
-                        Outils & Paramètres
-                      </h2>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Personnalisez votre expérience
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowOverlayControls(false)}
-                      className="md:hidden p-2 rounded-lg"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
+              <aside
+                className=" bg-white/80 w-80 dark:bg-gray-900/80 backdrop-blur-xl border-r
+               border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform 
+              duration-300 z-40 rounded-lg"
+              >
                 <div className="p-4 md:p-6">
                   <OverlayControlsImage
                     src={src}
@@ -290,13 +287,16 @@ const HomePage: React.FC = () => {
                   opacity={opacity}
                   transform={transform}
                   zIndex={20}
+                  canvasZoom={canvasNavState.zoom}
+                  canvasPan={canvasNavState.pan}
+                  pixelSize={canvasApiRef.current?.getPixelSize() || 1}
                 />
               </div>
             </section>
 
             {/* Right side drawer (md+) */}
             {(showNavInfo || showPixelCount || showAdminPanel) && (
-              <aside className="hidden md:block fixed top-16 right-28 bottom-8 w-72 lg:w-96 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-l border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform duration-300 z-40 rounded-lg">
+              <aside className="hidden md:block bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-l border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform duration-300 z-40 rounded-lg">
                 <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 p-4 md:p-6 border-b">
                   <div className="flex items-center justify-between">
                     <div>
@@ -331,6 +331,7 @@ const HomePage: React.FC = () => {
                         isAdminSelecting={canvasNavState.isAdminSelecting}
                         adminSelectionStart={canvasNavState.adminSelectionStart}
                         isVisible={() => setShowNavInfo(!showNavInfo)}
+                        onResetGrid={handleResetGrid}
                       />
                     </div>
                   )}

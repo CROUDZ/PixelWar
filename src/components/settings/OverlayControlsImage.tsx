@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import {
   Eye,
@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import type { OverlayTransform } from "../pixel/OverlayImage";
+import { v4 as uuidv4 } from "uuid"; // Add this import for generating unique keys
 
 interface Props {
   src: string;
@@ -77,13 +78,14 @@ export default function OverlayControls({
     return Number.isNaN(n) ? fallback : n;
   };
 
-  // key stable pour animatePresence : si data URL très longue, on hash sinon on fallback
-  const previewKey = localSrc
-    ? `preview-${String(localSrc).slice(0, 40)}`
-    : "placeholder";
+  const previewKey = useMemo(() => {
+    if (!localSrc) return "placeholder";
+    // slice pour éviter une clé trop longue, et uuid pour différencier les différentes images identiques collées
+    return `preview-${String(localSrc).slice(0, 40)}-${uuidv4()}`;
+  }, [localSrc]);
 
   return (
-    <AnimatePresence initial={false}>
+    <>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="px-2 py-1 rounded-md bg-white/10">
@@ -269,7 +271,7 @@ export default function OverlayControls({
           </div>
 
           <div>
-            <label className="text-xs">W</label>
+            <label className="text-xs">Taille</label>
             <input
               type="number"
               value={Math.round(transform.width)}
@@ -279,19 +281,6 @@ export default function OverlayControls({
                     10,
                     sanitizeNumber(e.target.value, transform.width),
                   ),
-                })
-              }
-              className="w-full p-2 rounded-md bg-white/5 text-sm"
-              aria-label="Largeur"
-            />
-          </div>
-          <div>
-            <label className="text-xs">H</label>
-            <input
-              type="number"
-              value={Math.round(transform.height)}
-              onChange={(e) =>
-                onChangeTransform({
                   height: Math.max(
                     10,
                     sanitizeNumber(e.target.value, transform.height),
@@ -299,7 +288,7 @@ export default function OverlayControls({
                 })
               }
               className="w-full p-2 rounded-md bg-white/5 text-sm"
-              aria-label="Hauteur"
+              aria-label="Largeur"
             />
           </div>
         </div>
@@ -396,6 +385,6 @@ export default function OverlayControls({
           </div>
         </div>
       </div>
-    </AnimatePresence>
+    </>
   );
 }

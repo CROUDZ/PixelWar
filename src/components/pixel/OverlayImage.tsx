@@ -2,7 +2,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import ImageFallback from "../Image";
 
 export interface OverlayTransform {
   x: number;
@@ -13,7 +13,7 @@ export interface OverlayTransform {
 }
 
 interface OverlayImageProps {
-  targetRef: React.RefObject<HTMLElement> | null; // l'élément au dessus duquel on se positionne (container du canvas)
+  targetRef: React.RefObject<HTMLElement> | null;
   src: string;
   show: boolean;
   opacity: number;
@@ -21,6 +21,10 @@ interface OverlayImageProps {
   zIndex?: number;
   pointerEvents?: "none" | "auto";
   className?: string;
+  canvasZoom?: number;
+  canvasPan?: { x: number; y: number };
+  pixelSize?: number;
+  debug?: boolean;
 }
 
 export default function OverlayImage({
@@ -32,26 +36,24 @@ export default function OverlayImage({
   zIndex = 100,
   pointerEvents = "none",
   className,
+  canvasZoom = 1,
+  canvasPan = { x: 0, y: 0 },
+  pixelSize = 1,
+  debug = false,
 }: OverlayImageProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     if (!targetRef?.current) return;
-
     const update = () => {
       const r = targetRef.current?.getBoundingClientRect() ?? null;
       setRect(r);
     };
-
     update();
-
-    // ResizeObserver pour suivre les changements de taille du container
     const ro = new ResizeObserver(update);
     ro.observe(targetRef.current);
-
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
-
     return () => {
       ro.disconnect();
       window.removeEventListener("scroll", update, true);
@@ -59,48 +61,91 @@ export default function OverlayImage({
     };
   }, [targetRef]);
 
-  // si pas de target ou pas d'affichage, rien
   if (!show || !src || !rect) return null;
   if (typeof document === "undefined") return null;
 
-  // position absolue dans le viewport calculée à partir du rect du target
-  const left = rect.left + window.scrollX + transform.x;
-  const top = rect.top + window.scrollY + transform.y;
-  const style: React.CSSProperties = {
+  // Calculs (on garde des floats pour éviter perte subpixel)
+  const canvasX = (transform.x * pixelSize + canvasPan.x) * canvasZoom;
+  const canvasY = (transform.y * pixelSize + canvasPan.y) * canvasZoom;
+  const scaledWidth = transform.width * pixelSize * canvasZoom;
+  const scaledHeight = transform.height * pixelSize * canvasZoom;
+
+  // debug utile quand problème persiste
+  if (debug) {
+    // eslint-disable-next-line no-console
+    console.log("[OverlayImage] debug", {
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      rectWidth: rect.width,
+      rectHeight: rect.height,
+      canvasX,
+      canvasY,
+      scaledWidth,
+      scaledHeight,
+      pixelSize,
+      canvasZoom,
+      devicePixelRatio:
+        typeof window !== "undefined" ? window.devicePixelRatio : 1,
+    });
+  }
+
+  // Portal target: on privilégie le conteneur du canvas pour avoir le même repère
+  const portalTarget = targetRef?.current ?? document.body;
+
+  // wrapper absolu qui recouvre exactement le conteneur (left/top = 0)
+  const wrapperStyle: React.CSSProperties = {
     position: "absolute",
-    left: Math.round(left),
-    top: Math.round(top),
-    width: Math.round(transform.width),
-    height: Math.round(transform.height),
-    transform: `rotate(${transform.rotation}deg)`,
-    transformOrigin: "center",
+    left: 0,
+    top: 0,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    pointerEvents: "none", // wrapper inactif ; on laisse pointerEvents sur l'image si besoin
+    overflow: "visible",
     zIndex,
+  };
+
+  // element positionné à l'intérieur du wrapper avec transform (préserve les floats / sous-pixels)
+  const innerStyle: React.CSSProperties = {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    // translation par transform pour éviter arrondis liés à left/top
+    transform: `translate3d(${canvasX}px, ${canvasY}px, 0) rotate(${transform.rotation}deg)`,
+    transformOrigin: "top left",
+    width: `${scaledWidth}px`,
+    height: `${scaledHeight}px`,
     pointerEvents,
+    willChange: "transform, width, height, opacity",
+    backfaceVisibility: "hidden",
     imageRendering: "pixelated",
+    // évite bordures non voulues :
+    boxSizing: "border-box",
   };
 
   const node = (
-    <div style={style} className={className}>
-      {/* utilisation d'une balise <img> pour éviter les contraintes de next/image dans le portal */}
-      <Image
-        src={src}
-        alt="Overlay"
-        draggable={false}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          opacity: opacity,
-          userSelect: "none",
-          pointerEvents: "none",
-          imageRendering: "pixelated",
-        }}
-        onError={() => {
-          /* tu peux ajouter un handler si tu veux */
-        }}
-      />
+    <div style={wrapperStyle} className={className}>
+      <div style={innerStyle}>
+        <ImageFallback
+          src={src}
+          alt="Overlay"
+          draggable={false}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            opacity: opacity,
+            userSelect: "none",
+            pointerEvents: "none",
+            imageRendering: "pixelated",
+            display: "block",
+          }}
+          onError={() => {
+            /* noop */
+          }}
+        />
+      </div>
     </div>
   );
 
-  return createPortal(node, document.body);
+  return createPortal(node, portalTarget);
 }

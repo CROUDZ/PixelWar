@@ -5,7 +5,7 @@ import { GetServerSideProps } from "next";
 import dynamic from "next/dynamic";
 import { useEventMode } from "@/context/EventMode"; // Import EventMode context
 
-const Header = dynamic(() => import("../components/Header"), {
+const Header = dynamic(() => import("../components/layout/Header"), {
   ssr: false,
 });
 

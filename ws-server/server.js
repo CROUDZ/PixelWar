@@ -795,160 +795,236 @@ class PaletteManager {
         return;
       }
 
-      // Gérer le ping de battement de cœur
-      if (data.type === "ping") {
-        try {
-          ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
-        } catch (e) {
-          console.error(`[WS ${ws._id}] Erreur lors de l'envoi du pong:`, e);
-        }
-        return;
-      }
-
-      if (data.type === "auth") {
-        try {
-          const internalId = data.userId ? String(data.userId) : null;
-          const discordId = data.discordId ? String(data.discordId) : null;
-          const token = data.clientToken ? String(data.clientToken) : null;
-
-          ws.clientToken = token;
-          ws.internalUserId = internalId;
-          ws.discordId = discordId;
-
-          if (discordId) {
-            addUserSocket(discordId, ws);
-            console.log(
-              `[WS ${ws._id}] auth enregistré discordId=${discordId} token=${token}`,
-            );
-          }
-          if (internalId) {
-            addUserSocket(internalId, ws);
-            console.log(
-              `[WS ${ws._id}] auth enregistré internalUserId=${internalId} token=${token}`,
-            );
-          }
-        } catch (e) {
-          console.error("[WS] erreur de gestion d'auth:", e);
-        }
-        return;
-      }
-
-      // Gérer la demande de resynchronisation
-      if (data.type === "requestInit") {
-        try {
-          const gridStr = palette.snapshotToArrayStrings(canvas.snapshot());
-          ws.send(
-            JSON.stringify({
-              type: "init",
-              width: WIDTH,
-              height: HEIGHT,
-              grid: gridStr,
-              totalPixels,
-              timestamp: Date.now(),
-            }),
-          );
-        } catch (e) {
-          console.error(`[WS ${ws._id}] Erreur lors de l'envoi de resync:`, e);
-        }
-        return;
-      }
-
       console.log(`[WS ${ws._id}] message brut:`, msg.toString());
       console.log(`[WS ${ws._id}] message analysé:`, data);
 
-      if (data.type === "placePixel") {
-        console.log(
-          `[WS ${ws._id}] placePixel reçu -> x=${data.x}, y=${data.y}, couleur=${data.color}, userId=${data.userId}`,
-        );
-        const place = validatePlacePixel(data);
-        if (!place) return;
+      switch (data.type) {
+        case "ping": {
+          try {
+            ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+          } catch (e) {
+            console.error(`[WS ${ws._id}] Erreur lors de l'envoi du pong:`, e);
+          }
+          break;
+        }
+        case "auth": {
+          try {
+            const internalId = data.userId ? String(data.userId) : null;
+            const discordId = data.discordId ? String(data.discordId) : null;
+            const token = data.clientToken ? String(data.clientToken) : null;
 
-        // convertir couleur en id (si chaîne) ou valider id
-        let colorId;
-        let colorString;
-        if (typeof place.color === "string") {
-          const prevLen = palette.idToColor.length;
-          colorString = String(place.color).toUpperCase();
-          colorId = palette.getId(colorString);
-          if (palette.idToColor.length !== prevLen) {
-            console.log(
-              "Nouvelle couleur enregistrée dans la palette:",
-              colorString,
-              "-> id",
-              colorId,
+            ws.clientToken = token;
+            ws.internalUserId = internalId;
+            ws.discordId = discordId;
+
+            if (discordId) {
+              addUserSocket(discordId, ws);
+              console.log(
+                `[WS ${ws._id}] auth enregistré discordId=${discordId} token=${token}`,
+              );
+            }
+            if (internalId) {
+              addUserSocket(internalId, ws);
+              console.log(
+                `[WS ${ws._id}] auth enregistré internalUserId=${internalId} token=${token}`,
+              );
+            }
+          } catch (e) {
+            console.error("[WS] erreur de gestion d'auth:", e);
+          }
+          break;
+        }
+        case "requestInit": {
+          try {
+            const gridStr = palette.snapshotToArrayStrings(canvas.snapshot());
+            ws.send(
+              JSON.stringify({
+                type: "init",
+                width: WIDTH,
+                height: HEIGHT,
+                grid: gridStr,
+                totalPixels,
+                timestamp: Date.now(),
+              }),
+            );
+          } catch (e) {
+            console.error(
+              `[WS ${ws._id}] Erreur lors de l'envoi de resync:`,
+              e,
             );
           }
-        } else {
-          colorId = Number(place.color) || 0;
-          colorString = palette.getColor(colorId);
+          break;
         }
-
-        const key = place.userId || ws._id;
-
-        let changed = false;
-        try {
-          changed = canvas.setPixel(place.x, place.y, colorId);
+        case "placePixel": {
           console.log(
-            `[server] canvas.setPixel a retourné: ${changed} pour (${place.x},${place.y}) colorId=${colorId}`,
+            `[WS ${ws._id}] placePixel reçu -> x=${data.x}, y=${data.y}, couleur=${data.color}, userId=${data.userId}`,
           );
-        } catch (err) {
-          console.error("[server] erreur setPixel:", err);
-          changed = false;
-        }
+          const place = validatePlacePixel(data);
+          if (!place) return;
 
-        if (!changed) {
-          console.log(
-            "[server] aucun changement (même couleur) — ignorer la file et la diffusion",
-          );
-          return;
-        }
-
-        // programmer la sauvegarde avec anti-rebond
-        scheduleSaveGrid();
-
-        // pousser l'événement vers la file Redis avec chaîne de couleur (garde le schéma DB inchangé)
-        const now = Date.now();
-        await pushToQueue({
-          x: place.x,
-          y: place.y,
-          color: colorString,
-          userId: place.userId ?? null,
-          isAdmin: place.isAdmin,
-          name: place.name ?? null,
-          avatar: place.avatar ?? null,
-          timestamp: now,
-        });
-
-        totalPixels += 1;
-
-        // diffuser immédiatement en utilisant la chaîne de couleur (les clients de compat attendent des chaînes)
-        broadcast({
-          type: "updatePixel",
-          x: place.x,
-          y: place.y,
-          color: colorString,
-          userId: key,
-          timestamp: now,
-          name: place.name ?? null,
-          avatar: place.avatar ?? null,
-          totalPixels,
-        });
-
-        console.log(
-          `Mise à jour du pixel diffusée : x=${place.x}, y=${place.y}, couleur=${colorString}, total=${totalPixels}`,
-        );
-
-        // optionnellement déclencher le consommateur si la file est grande
-        try {
-          const qlen = await client.lLen(QUEUE_KEY);
-          if (qlen >= BATCH_MAX) {
-            void flushRedisQueue();
+          // convertir couleur en id (si chaîne) ou valider id
+          let colorId;
+          let colorString;
+          if (typeof place.color === "string") {
+            const prevLen = palette.idToColor.length;
+            colorString = String(place.color).toUpperCase();
+            colorId = palette.getId(colorString);
+            if (palette.idToColor.length !== prevLen) {
+              console.log(
+                "Nouvelle couleur enregistrée dans la palette:",
+                colorString,
+                "-> id",
+                colorId,
+              );
+            }
+          } else {
+            colorId = Number(place.color) || 0;
+            colorString = palette.getColor(colorId);
           }
-        } catch (e) {
-          console.error(
-            "Erreur lors de la vérification de la longueur de la file Redis:",
-            e,
+
+          const key = place.userId || ws._id;
+
+          let changed = false;
+          try {
+            changed = canvas.setPixel(place.x, place.y, colorId);
+            console.log(
+              `[server] canvas.setPixel a retourné: ${changed} pour (${place.x},${place.y}) colorId=${colorId}`,
+            );
+          } catch (err) {
+            console.error("[server] erreur setPixel:", err);
+            changed = false;
+          }
+
+          if (!changed) {
+            console.log(
+              "[server] aucun changement (même couleur) — ignorer la file et la diffusion",
+            );
+            return;
+          }
+
+          // programmer la sauvegarde avec anti-rebond
+          scheduleSaveGrid();
+
+          // pousser l'événement vers la file Redis avec chaîne de couleur (garde le schéma DB inchangé)
+          const now = Date.now();
+          await pushToQueue({
+            x: place.x,
+            y: place.y,
+            color: colorString,
+            userId: place.userId ?? null,
+            isAdmin: place.isAdmin,
+            name: place.name ?? null,
+            avatar: place.avatar ?? null,
+            timestamp: now,
+          });
+
+          totalPixels += 1;
+
+          // diffuser immédiatement en utilisant la chaîne de couleur (les clients de compat attendent des chaînes)
+          broadcast({
+            type: "updatePixel",
+            x: place.x,
+            y: place.y,
+            color: colorString,
+            userId: key,
+            timestamp: now,
+            name: place.name ?? null,
+            avatar: place.avatar ?? null,
+            totalPixels,
+          });
+
+          console.log(
+            `Mise à jour du pixel diffusée : x=${place.x}, y=${place.y}, couleur=${colorString}, total=${totalPixels}`,
           );
+
+          // optionnellement déclencher le consommateur si la file est grande
+          try {
+            const qlen = await client.lLen(QUEUE_KEY);
+            if (qlen >= BATCH_MAX) {
+              void flushRedisQueue();
+            }
+          } catch (e) {
+            console.error(
+              "Erreur lors de la vérification de la longueur de la file Redis:",
+              e,
+            );
+          }
+        }
+        case "placeAdminBlock": {
+          console.log(
+            `[WS ${ws._id}] placeAdminBlock reçu -> pixels=${data.pixels.length}, userId=${data.userId}`,
+          );
+
+          if (!data.isAdmin || !Array.isArray(data.pixels)) {
+            console.warn(
+              `[WS ${ws._id}] placeAdminBlock rejeté (non-admin ou données invalides).`,
+            );
+            return;
+          }
+
+          const updates = [];
+          const now = Date.now();
+
+          for (const pixel of data.pixels) {
+            const { x, y, color } = pixel;
+            if (
+              !Number.isFinite(x) ||
+              !Number.isFinite(y) ||
+              typeof color !== "string" ||
+              x < 0 ||
+              x >= WIDTH ||
+              y < 0 ||
+              y >= HEIGHT
+            ) {
+              console.warn(
+                `[WS ${ws._id}] Pixel invalide ignoré: x=${x}, y=${y}, color=${color}`,
+              );
+              continue;
+            }
+
+            const colorId = palette.getId(color.toUpperCase());
+            const changed = canvas.setPixel(x, y, colorId);
+
+            if (changed) {
+              updates.push({
+                x,
+                y,
+                color,
+                userId: data.userId,
+                timestamp: now,
+              });
+            }
+          }
+
+          if (updates.length === 0) {
+            console.log(
+              `[WS ${ws._id}] Aucun pixel modifié dans placeAdminBlock.`,
+            );
+            return;
+          }
+
+          // Programmer la sauvegarde avec anti-rebond
+          scheduleSaveGrid();
+
+          // Pousser les mises à jour dans la file Redis
+          for (const update of updates) {
+            await pushToQueue(update);
+          }
+
+          // Diffuser les mises à jour aux clients
+          for (const update of updates) {
+            broadcast({
+              type: "updatePixel",
+              ...update,
+            });
+          }
+
+          totalPixels += updates.length;
+
+          console.log(
+            `[WS ${ws._id}] ${updates.length} pixel(s) mis à jour par placeAdminBlock.`,
+          );
+          break;
         }
       }
     });

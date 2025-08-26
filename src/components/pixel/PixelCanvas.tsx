@@ -57,6 +57,7 @@ export type PixelCanvasHandle = {
   resetView: () => void;
   getZoom: () => number;
   setPan: (p: { x: number; y: number }) => void;
+  getPixelSize: () => number;
 };
 
 const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
@@ -221,8 +222,9 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         },
         getZoom: () => zoom,
         setPan: (p: { x: number; y: number }) => setPan(p),
+        getPixelSize: () => pixelSize,
       }),
-      [zoom],
+      [zoom, pixelSize],
     );
 
     // Synchronisation des props contrôlées

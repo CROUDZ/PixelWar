@@ -22,6 +22,33 @@ export default function PixelInformations() {
   const connCheckerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    console.log("[PixelCount] (FR) initialisation du nombre de pixels...");
+    try {
+      const fetchData = async () => {
+        const response = await fetch("/api/prisma/pixelAction?limit=100");
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des données");
+        }
+        const data = await response.json();
+        console.log("[PixelCount] (FR) Données récupérées :", data);
+
+        // Initialize state with fetched data
+        setCount(data.length); // Assuming `data` contains an array of pixel actions
+        timestampsRef.current = data.map((action: { createdAt: string }) =>
+          new Date(action.createdAt).getTime(),
+        );
+      };
+
+      fetchData();
+    } catch (error) {
+      console.error(
+        "[PixelCount] (FR) Erreur lors de l'initialisation :",
+        error,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     wsRef.current = getWS();
     setConnected(Boolean(isWSConnected()));
 
@@ -198,7 +225,7 @@ export default function PixelInformations() {
                         Pixel placé
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    <div className="ml-1 flex items-center gap-1 text-gray-500 dark:text-gray-400">
                       <Clock size={12} />
                       <span className="font-mono text-xs">
                         {new Date(timestamp).toLocaleTimeString("fr-FR", {

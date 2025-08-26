@@ -7,6 +7,7 @@ import {
   Shield,
   Move,
   Paintbrush,
+  RotateCcw,
 } from "lucide-react";
 
 type Point = { x: number; y: number } | null;
@@ -19,6 +20,7 @@ interface NavigationOverlayProps {
   adminSelectionStart?: Point;
   className?: string;
   isVisible?: (visible: boolean) => void; // Callback pour la visibilité
+  onResetGrid?: () => void; // Callback pour le reset de la grille
 }
 
 /**
@@ -32,6 +34,7 @@ export default function NavigationOverlay({
   isAdminSelecting = false,
   adminSelectionStart = null,
   className = "",
+  onResetGrid,
 }: NavigationOverlayProps) {
   // Si mobile, on peut rendre une version compacte
   if (isMobile) {
@@ -268,6 +271,45 @@ export default function NavigationOverlay({
           </div>
         </div>
       </div>
+
+      {/* Bouton de reset de la grille */}
+      {onResetGrid && (
+        <div
+          className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 
+                        rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/50"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+              <RotateCcw size={16} className="text-white" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Réinitialisation
+              </h4>
+              <p className="text-xs text-orange-600 dark:text-orange-400">
+                Remettre à zéro la vue
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onResetGrid}
+            className="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 
+                       hover:from-orange-600 hover:to-amber-700 text-white text-sm font-medium 
+                       rounded-lg transition-all duration-200 transform hover:scale-105 
+                       active:scale-95 shadow-lg hover:shadow-xl"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <RotateCcw size={14} />
+              <span>Réinitialiser la vue</span>
+            </div>
+          </button>
+
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
+            Remet le zoom et la position à l'état initial
+          </p>
+        </div>
+      )}
     </div>
   );
 }
