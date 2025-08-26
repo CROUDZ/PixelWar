@@ -12,12 +12,26 @@ import Footer from "@/components/Footer";
 import NotificationContainer from "@/components/NotificationContainer";
 import PixelCanvas from "@/components/pixel/PixelCanvas";
 
-const OverlayImage = dynamic(() => import("@/components/pixel/OverlayImage"), { ssr: false });
-const PixelInformations = dynamic(() => import("@/components/PixelInfo"), { ssr: false });
-const OverlayControlsImage = dynamic(() => import("@/components/settings/OverlayControlsImage"), { ssr: false });
-const NavigationOverlay = dynamic(() => import("@/components/infos/NavigationOverlay"), { ssr: false });
-const AdminPanel = dynamic(() => import("@/components/settings/AdminPanel"), { ssr: false });
-const PixelCount = dynamic(() => import("@/components/infos/PixelCount"), { ssr: false });
+const OverlayImage = dynamic(() => import("@/components/pixel/OverlayImage"), {
+  ssr: false,
+});
+const PixelInformations = dynamic(() => import("@/components/PixelInfo"), {
+  ssr: false,
+});
+const OverlayControlsImage = dynamic(
+  () => import("@/components/settings/OverlayControlsImage"),
+  { ssr: false },
+);
+const NavigationOverlay = dynamic(
+  () => import("@/components/infos/NavigationOverlay"),
+  { ssr: false },
+);
+const AdminPanel = dynamic(() => import("@/components/settings/AdminPanel"), {
+  ssr: false,
+});
+const PixelCount = dynamic(() => import("@/components/infos/PixelCount"), {
+  ssr: false,
+});
 const Banned = dynamic(() => import("@/components/banned"), { ssr: false });
 
 type OverlayTransform = {
@@ -40,7 +54,8 @@ interface CanvasNavState {
 
 const HomePage: React.FC = () => {
   const { data: session } = useSession();
-  const [showOverlayControls, setShowOverlayControls] = useState<boolean>(false);
+  const [showOverlayControls, setShowOverlayControls] =
+    useState<boolean>(false);
   const [showPixelInfos, setShowPixelInfos] = useState<boolean>(false);
   const [showNavInfo, setShowNavInfo] = useState<boolean>(false);
   const [canvasNavState, setCanvasNavState] = useState<CanvasNavState>({
@@ -59,7 +74,13 @@ const HomePage: React.FC = () => {
   const [src, setSrc] = useState<string>("");
   const [show, setShow] = useState<boolean>(false);
   const [opacity, setOpacity] = useState<number>(0.5);
-  const [transform, setTransform] = useState<OverlayTransform>({ x: 0, y: 0, width: 300, height: 300, rotation: 0 });
+  const [transform, setTransform] = useState<OverlayTransform>({
+    x: 0,
+    y: 0,
+    width: 300,
+    height: 300,
+    rotation: 0,
+  });
   const [showPixelCount, setShowPixelCount] = useState<boolean>(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminSelectedSize, setAdminSelectedSize] = useState(5);
@@ -70,12 +91,12 @@ const HomePage: React.FC = () => {
     const updateMobile = () => {
       const isMobile = window.innerWidth < 768;
       setCanvasNavState((s) => ({ ...s, isMobile }));
+      console.log("[HomePage] (FR) Mode mobile mis à jour :", isMobile);
     };
     updateMobile();
     window.addEventListener("resize", updateMobile);
     return () => window.removeEventListener("resize", updateMobile);
   }, []);
-
 
   // Fermeture rapide des overlays avec Échap
   useEffect(() => {
@@ -86,6 +107,7 @@ const HomePage: React.FC = () => {
         setShowNavInfo(false);
         setShowPixelCount(false);
         setShowAdminPanel(false);
+        console.log("[HomePage] (FR) Fermeture rapide des overlays avec Échap");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -93,18 +115,28 @@ const HomePage: React.FC = () => {
   }, []);
 
   if (session?.user?.banned) {
+    console.log(
+      "[HomePage] (FR) Utilisateur banni, affichage du composant Banned",
+    );
     return <Banned reason="Violation des règles" duration="Indéfinie" />;
   }
 
-  console.log("[HomePage] Rendered with session:", session);
+  console.log("[HomePage] (FR) Rendu avec session :", session);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black">
       <Header />
 
-      <main className="relative z-10 flex flex-col" style={{ minHeight: 'calc(100vh - 96px)' }}>
+      <main
+        className="relative z-10 flex flex-col"
+        style={{ minHeight: "calc(100vh - 96px)" }}
+      >
         {/* Overlay sombre pour mobile quand un panneau est ouvert */}
-        {(showOverlayControls || showPixelInfos || showNavInfo || showPixelCount || showAdminPanel) && (
+        {(showOverlayControls ||
+          showPixelInfos ||
+          showNavInfo ||
+          showPixelCount ||
+          showAdminPanel) && (
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
             onClick={() => {
@@ -113,12 +145,13 @@ const HomePage: React.FC = () => {
               setShowNavInfo(false);
               setShowPixelCount(false);
               setShowAdminPanel(false);
+              console.log("[HomePage] (FR) Overlay mobile fermé par clic");
             }}
           />
         )}
 
         <div className="flex w-full">
-          {/* Left sidebar: mobile -> bottom floating bar, md+ -> vertical fixed */}
+          {/* Barre latérale gauche : mobile -> barre flottante en bas, md+ -> verticale fixe */}
           <div className="md:fixed md:left-4 md:top-1/3 z-50 pointer-events-auto">
             <div className="w-full md:w-20">
               <LeftSidebar
@@ -127,11 +160,41 @@ const HomePage: React.FC = () => {
                 showNavInfo={showNavInfo}
                 showPixelCount={showPixelCount}
                 showAdminPanel={showAdminPanel}
-                onToggleOverlayControls={() => setShowOverlayControls((s) => !s)}
-                onTogglePixelInfos={() => setShowPixelInfos((s) => !s)}
-                onToggleNavInfo={() => setShowNavInfo((s) => !s)}
-                onTogglePixelCount={() => setShowPixelCount((s) => !s)}
-                onToggleAdminPanel={() => setShowAdminPanel((s) => !s)}
+                onToggleOverlayControls={() => {
+                  setShowOverlayControls((s) => !s);
+                  console.log(
+                    "[HomePage] (FR) Toggle overlay controls :",
+                    !showOverlayControls,
+                  );
+                }}
+                onTogglePixelInfos={() => {
+                  setShowPixelInfos((s) => !s);
+                  console.log(
+                    "[HomePage] (FR) Toggle pixel infos :",
+                    !showPixelInfos,
+                  );
+                }}
+                onToggleNavInfo={() => {
+                  setShowNavInfo((s) => !s);
+                  console.log(
+                    "[HomePage] (FR) Toggle navigation info :",
+                    !showNavInfo,
+                  );
+                }}
+                onTogglePixelCount={() => {
+                  setShowPixelCount((s) => !s);
+                  console.log(
+                    "[HomePage] (FR) Toggle pixel count :",
+                    !showPixelCount,
+                  );
+                }}
+                onToggleAdminPanel={() => {
+                  setShowAdminPanel((s) => !s);
+                  console.log(
+                    "[HomePage] (FR) Toggle admin panel :",
+                    !showAdminPanel,
+                  );
+                }}
                 isAdmin={session?.user?.role === "ADMIN"}
                 A2F={session?.user?.twoFA ?? false} // Ajout de la vérification A2F avec une valeur par défaut
               />
@@ -146,10 +209,19 @@ const HomePage: React.FC = () => {
                 <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 p-4 md:p-6 border-b">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-lg md:text-xl font-bold">Outils & Paramètres</h2>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Personnalisez votre expérience</p>
+                      <h2 className="text-lg md:text-xl font-bold">
+                        Outils & Paramètres
+                      </h2>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Personnalisez votre expérience
+                      </p>
                     </div>
-                    <button onClick={() => setShowOverlayControls(false)} className="md:hidden p-2 rounded-lg">✕</button>
+                    <button
+                      onClick={() => setShowOverlayControls(false)}
+                      className="md:hidden p-2 rounded-lg"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
                 <div className="p-4 md:p-6">
@@ -161,8 +233,13 @@ const HomePage: React.FC = () => {
                     onToggleShow={setShow}
                     onChangeSrc={(s) => setSrc(s)}
                     onChangeOpacity={setOpacity}
-                    onChangeTransform={(patch) => setTransform((t) => ({ ...t, ...patch }))}
-                    onRemove={() => { setSrc(""); setShow(false); }}
+                    onChangeTransform={(patch) =>
+                      setTransform((t) => ({ ...t, ...patch }))
+                    }
+                    onRemove={() => {
+                      setSrc("");
+                      setShow(false);
+                    }}
                     onClose={() => setShowOverlayControls(false)}
                   />
                 </div>
@@ -174,11 +251,20 @@ const HomePage: React.FC = () => {
               <div
                 ref={canvasContainerRef}
                 className="relative flex items-center justify-center"
-                style={{ width: 'min(94vw, 980px)', maxWidth: '980px', aspectRatio: '1 / 1' }}
+                style={{
+                  width: "min(94vw, 980px)",
+                  maxWidth: "980px",
+                  aspectRatio: "1 / 1",
+                }}
               >
-
                 <div className="relative group w-full h-full">
-                  <div className="absolute inset-0 rounded-3xl blur-xl opacity-30" style={{ background: 'linear-gradient(90deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12), rgba(236,72,153,0.12))' }} />
+                  <div
+                    className="absolute inset-0 rounded-3xl blur-xl opacity-30"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12), rgba(236,72,153,0.12))",
+                    }}
+                  />
 
                   <div className="relative bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl rounded-2xl p-3 border shadow-2xl w-full h-full flex items-center justify-center">
                     {/* PixelCanvas should scale to the container. Laisser le composant gérer le rendu pixel-perfect mais lui fournir la taille du container si besoin. */}
@@ -197,7 +283,14 @@ const HomePage: React.FC = () => {
                   </div>
                 </div>
 
-                <OverlayImage targetRef={canvasContainerRef as React.RefObject<HTMLElement>} src={src} show={show} opacity={opacity} transform={transform} zIndex={20} />
+                <OverlayImage
+                  targetRef={canvasContainerRef as React.RefObject<HTMLElement>}
+                  src={src}
+                  show={show}
+                  opacity={opacity}
+                  transform={transform}
+                  zIndex={20}
+                />
               </div>
             </section>
 
@@ -207,10 +300,24 @@ const HomePage: React.FC = () => {
                 <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 p-4 md:p-6 border-b">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-lg md:text-xl font-bold">Stats & Contrôles</h2>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Performances en temps réel</p>
+                      <h2 className="text-lg md:text-xl font-bold">
+                        Stats & Contrôles
+                      </h2>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Performances en temps réel
+                      </p>
                     </div>
-                    <button onClick={() => { setShowPixelInfos(false); setShowNavInfo(false); setShowPixelCount(false); setShowAdminPanel(false); }} className="md:hidden p-2 rounded-lg">✕</button>
+                    <button
+                      onClick={() => {
+                        setShowPixelInfos(false);
+                        setShowNavInfo(false);
+                        setShowPixelCount(false);
+                        setShowAdminPanel(false);
+                      }}
+                      className="md:hidden p-2 rounded-lg"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
 

@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { subscribeConnectionState, getConnectionState, forceReconnect, type ConnectionState } from '@/lib/ws';
+import React, { useState, useEffect } from "react";
+import {
+  subscribeConnectionState,
+  getConnectionState,
+  forceReconnect,
+  type ConnectionState,
+} from "@/lib/ws";
 
 interface ConnectionStatusProps {
   showDebugInfo?: boolean;
   className?: string;
 }
 
-export default function ConnectionStatus({ showDebugInfo = false, className = '' }: ConnectionStatusProps) {
-  const [connectionState, setConnectionState] = useState<ConnectionState>(getConnectionState());
+export default function ConnectionStatus({
+  showDebugInfo = false,
+  className = "",
+}: ConnectionStatusProps) {
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>(getConnectionState());
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -19,19 +28,19 @@ export default function ConnectionStatus({ showDebugInfo = false, className = ''
   }, []);
 
   const getStatusColor = () => {
-    if (connectionState.isConnecting) return 'bg-yellow-500';
-    if (connectionState.isConnected) return 'bg-green-500';
-    return 'bg-red-500';
+    if (connectionState.isConnecting) return "bg-yellow-500";
+    if (connectionState.isConnected) return "bg-green-500";
+    return "bg-red-500";
   };
 
   const getStatusText = () => {
-    if (connectionState.isConnecting) return 'Connexion...';
-    if (connectionState.isConnected) return 'Connecté';
-    return 'Déconnecté';
+    if (connectionState.isConnecting) return "Connexion...";
+    if (connectionState.isConnected) return "Connecté";
+    return "Déconnecté";
   };
 
   const formatLastConnected = () => {
-    if (!connectionState.lastConnected) return 'Jamais';
+    if (!connectionState.lastConnected) return "Jamais";
     const date = new Date(connectionState.lastConnected);
     return date.toLocaleTimeString();
   };
@@ -47,7 +56,7 @@ export default function ConnectionStatus({ showDebugInfo = false, className = ''
 
   return (
     <div className={`bg-white rounded-lg shadow-md p-4 ${className}`}>
-      <div 
+      <div
         className="flex items-center justify-between cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
@@ -57,7 +66,7 @@ export default function ConnectionStatus({ showDebugInfo = false, className = ''
           <span className="text-sm text-gray-600">{getStatusText()}</span>
         </div>
         <button className="text-gray-400 hover:text-gray-600">
-          {expanded ? '▼' : '▶'}
+          {expanded ? "▼" : "▶"}
         </button>
       </div>
 
@@ -70,21 +79,29 @@ export default function ConnectionStatus({ showDebugInfo = false, className = ''
             </div>
             <div>
               <span className="font-medium text-gray-700">Tentatives:</span>
-              <span className="ml-2 text-gray-600">{connectionState.reconnectAttempts}</span>
+              <span className="ml-2 text-gray-600">
+                {connectionState.reconnectAttempts}
+              </span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Dernière connexion:</span>
-              <span className="ml-2 text-gray-600">{formatLastConnected()}</span>
+              <span className="font-medium text-gray-700">
+                Dernière connexion:
+              </span>
+              <span className="ml-2 text-gray-600">
+                {formatLastConnected()}
+              </span>
             </div>
           </div>
-          
+
           <div className="pt-3 border-t">
             <button
               onClick={forceReconnect}
               disabled={connectionState.isConnecting}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {connectionState.isConnecting ? 'Connexion...' : 'Forcer la reconnexion'}
+              {connectionState.isConnecting
+                ? "Connexion..."
+                : "Forcer la reconnexion"}
             </button>
           </div>
         </div>

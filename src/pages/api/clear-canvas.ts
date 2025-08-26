@@ -5,12 +5,12 @@ import prisma from "@/lib/prisma";
 import { createClient } from "redis";
 
 const client = createClient(
-  process.env.REDIS_URL ? { url: process.env.REDIS_URL } : {}
+  process.env.REDIS_URL ? { url: process.env.REDIS_URL } : {},
 );
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -29,7 +29,7 @@ export default async function handler(
     }
 
     const { confirmationToken } = req.body;
-    
+
     // Vérifier que l'utilisateur a fourni le token de confirmation
     if (confirmationToken !== "CLEAR_CANVAS_CONFIRM") {
       return res.status(400).json({ error: "Invalid confirmation token" });
@@ -47,7 +47,9 @@ export default async function handler(
     const HEIGHT = Number(process.env.GRID_HEIGHT || 100);
     const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFF";
 
-    console.log(`[ADMIN] Starting canvas clear by user ${session.user.id} (${session.user.email})`);
+    console.log(
+      `[ADMIN] (FR) Début de la suppression du canvas par l'utilisateur ${session.user.id} (${session.user.email})`,
+    );
 
     // 1. Créer une grille vide (format legacy JSON pour compatibilité)
     const emptyGrid = new Array(WIDTH * HEIGHT).fill(DEFAULT_COLOR);
@@ -57,27 +59,29 @@ export default async function handler(
 
     // 3. ATOMIQUE : Nettoyer toutes les données Redis
     const multi = client.multi();
-    
+
     // Supprimer l'ancienne grille JSON
     multi.del(GRID_KEY);
-    
+
     // Supprimer la grille binaire
     multi.del(BINARY_KEY);
-    
+
     // Vider complètement la queue Redis
     multi.del(QUEUE_KEY);
-    
+
     // Créer la nouvelle grille JSON vide
     multi.set(GRID_KEY, JSON.stringify(emptyGrid));
-    
+
     // Créer la nouvelle grille binaire vide
     multi.set(BINARY_KEY, Buffer.from(emptyBinaryGrid));
-    
+
     await multi.exec();
 
     // 4. Supprimer toutes les actions de pixels de la base de données
     const deletedPixels = await prisma.pixelAction.deleteMany();
-    console.log(`[ADMIN] Deleted ${deletedPixels.count} pixel actions from database`);
+    console.log(
+      `[ADMIN] (FR) ${deletedPixels.count} actions de pixels supprimées de la base de données`,
+    );
 
     // 5. Publier un message Redis pour notifier le serveur WebSocket
     const clearMessage = {
@@ -86,27 +90,29 @@ export default async function handler(
       width: WIDTH,
       height: HEIGHT,
       defaultColor: DEFAULT_COLOR,
-      grid: emptyGrid // Inclure la grille vide pour synchronisation immédiate
+      grid: emptyGrid, // Inclure la grille vide pour synchronisation immédiate
     };
 
     await client.publish("canvas-clear", JSON.stringify(clearMessage));
 
-    console.log(`[ADMIN] Canvas cleared successfully - Redis and DB cleaned, WebSocket notified`);
+    console.log(
+      `[ADMIN] (FR) Canvas supprimé avec succès - Redis et DB nettoyés, WebSocket notifié`,
+    );
 
     await client.quit();
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: "Canvas cleared successfully",
       clearedBy: session.user.email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
-    console.error("Error clearing canvas:", error);
-    return res.status(500).json({ 
+    console.error("Erreur lors de la suppression du canvas :", error);
+    return res.status(500).json({
       error: "Internal server error",
-      details: process.env.NODE_ENV === "development" ? String(error) : undefined
+      details:
+        process.env.NODE_ENV === "development" ? String(error) : undefined,
     });
   }
 }

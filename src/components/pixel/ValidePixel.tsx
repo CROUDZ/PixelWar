@@ -16,7 +16,10 @@ import { useEventMode } from "@/context/EventMode";
 import { openInPopup } from "@/lib/utils";
 
 const ENV = process.env.NODE_ENV || "development";
-const DOMAIN = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+const DOMAIN =
+  ENV === "production"
+    ? "https://pixelwar-hubdurp.fr"
+    : "http://localhost:3000";
 
 interface ValidePixelProps {
   initialX: number;
@@ -42,7 +45,12 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   const [color, setColor] = useState(initialColor);
   const [remainingTime, setRemainingTime] = useState(0);
 
-  console.log("[ValidePixel] Initial color:", initialColor, "Current color:", color);
+  console.log(
+    "[ValidePixel] (FR) Couleur initiale :",
+    initialColor,
+    "Couleur actuelle :",
+    color,
+  );
 
   const { data: session, status } = useSession();
   const { isActive, startTime, endTime } = useEventMode();
@@ -92,11 +100,12 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   }, [session]);
 
   const handleValidate = () => {
-    console.log("[ValidePixel] Validating pixel with color:", color);
+    console.log(
+      "[ValidePixel] (FR) Validation du pixel avec la couleur :",
+      color,
+    );
     if (!session) {
-      openInPopup(
-        `${DOMAIN}/auth/discord-redirect`
-      );
+      openInPopup(`${DOMAIN}/auth/discord-redirect`);
       return;
     }
     if (!session.user.linked) {
@@ -314,12 +323,12 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
                   Couleur
                 </label>
               </div>
-              <PixelSelector 
+              <PixelSelector
                 onSelect={(newColor) => {
-                  console.log("[ValidePixel] Color changed to:", newColor);
+                  console.log("[ValidePixel] (FR) Couleur changée :", newColor);
                   setColor(newColor);
-                }} 
-                initial={color} 
+                }}
+                initial={color}
               />
             </div>
 

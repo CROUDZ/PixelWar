@@ -34,10 +34,12 @@ const loadButtons = (client: Client): void => {
             typeof button.default?.execute === "function"
           ) {
             client.buttons.set(button.default.id, button.default);
-            console.log(`Button ${button.default.id} loaded from ${filePath}`);
+            console.log(
+              `Bouton ${button.default.id} chargé depuis ${filePath}`,
+            );
           } else {
             console.error(
-              `[WARNING] Button in ${filePath} is missing required "id" or "execute" properties`,
+              `[AVERTISSEMENT] Le bouton dans ${filePath} n'a pas les propriétés requises "id" ou "execute"`,
             );
           }
         });
@@ -49,10 +51,10 @@ const loadButtons = (client: Client): void => {
           typeof button.default?.execute === "function"
         ) {
           client.buttons.set(button.default.id, button.default);
-          console.log(`Button ${button.default.id} loaded from ${itemPath}`);
+          console.log(`Bouton ${button.default.id} chargé depuis ${itemPath}`);
         } else {
           console.error(
-            `[WARNING] Button in ${itemPath} is missing required "id" or "execute" properties`,
+            `[AVERTISSEMENT] Le bouton dans ${itemPath} n'a pas les propriétés requises "id" ou "execute"`,
           );
         }
       });

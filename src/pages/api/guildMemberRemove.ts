@@ -17,22 +17,34 @@ export default async function handler(
   if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
-    console.log("[guildMemberRemove] deleting sessions for", userId);
+    console.log(
+      "[guildMemberRemove] (FR) Suppression des sessions pour",
+      userId,
+    );
     await prisma.session.deleteMany({ where: { userId } });
 
-    console.log("[guildMemberRemove] update user joinGuild=false for", userId);
+    console.log(
+      "[guildMemberRemove] (FR) Mise à jour de joinGuild=false pour l'utilisateur",
+      userId,
+    );
     await prisma.user.update({
       where: { id: userId },
       data: { joinGuild: false },
     });
 
-    console.log("[guildMemberRemove] publishing redis logout for", userId);
+    console.log(
+      "[guildMemberRemove] (FR) Publication du logout Redis pour",
+      userId,
+    );
     const published = await pub.publish("logout", JSON.stringify({ userId }));
-    console.log("[guildMemberRemove] redis publish returned:", published);
+    console.log(
+      "[guildMemberRemove] (FR) Retour de la publication Redis :",
+      published,
+    );
 
     return res.status(200).json({ success: true, published });
   } catch (error) {
-    console.error("[guildMemberRemove] error:", error);
+    console.error("[guildMemberRemove] (FR) erreur :", error);
     return res.status(500).json({ error: "Failed to remove user" });
   }
 }

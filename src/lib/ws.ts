@@ -35,7 +35,7 @@ let connectionState: ConnectionState = {
   reconnectAttempts: 0,
 };
 
-  const URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
+const URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
 
 // Exponential backoff for reconnection
 function getReconnectDelay(attempt: number): number {
@@ -89,7 +89,7 @@ function startHeartbeat() {
         console.warn("[WS] Heartbeat timeout - closing connection");
         ws?.close();
       }, HEARTBEAT_TIMEOUT);
-      
+
       try {
         ws.send(JSON.stringify({ type: "ping" }));
       } catch (e) {
@@ -121,13 +121,16 @@ function generateMessageId(): string {
 function cleanQueue() {
   const now = Date.now();
   const maxAge = 5 * 60 * 1000; // 5 minutes
-  
+
   for (let i = sendQueue.length - 1; i >= 0; i--) {
-    if (now - sendQueue[i].timestamp > maxAge || sendQueue[i].retries >= MAX_RETRIES) {
+    if (
+      now - sendQueue[i].timestamp > maxAge ||
+      sendQueue[i].retries >= MAX_RETRIES
+    ) {
       sendQueue.splice(i, 1);
     }
   }
-  
+
   // Keep queue size manageable
   if (sendQueue.length > MAX_QUEUE_SIZE) {
     sendQueue.splice(0, sendQueue.length - MAX_QUEUE_SIZE);
@@ -135,21 +138,21 @@ function cleanQueue() {
 }
 
 function createSocket() {
-  console.log("[WS] createSocket ->", URL);
+  console.log("[WS] (FR) Création du socket ->", URL);
   connectInProgress = true;
   updateConnectionState({ isConnecting: true });
-  
+
   ws = new WebSocket(URL);
 
   ws.onopen = () => {
-    console.log("[WS] onopen");
+    console.log("[WS] (FR) onopen");
     connectInProgress = false;
     connectionState.reconnectAttempts = 0;
-    updateConnectionState({ 
-      isConnected: true, 
-      isConnecting: false, 
+    updateConnectionState({
+      isConnected: true,
+      isConnecting: false,
       lastConnected: Date.now(),
-      reconnectAttempts: 0 
+      reconnectAttempts: 0,
     });
 
     // Start heartbeat
@@ -160,12 +163,12 @@ function createSocket() {
     while (sendQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
       const message = sendQueue.shift();
       if (!message) continue;
-      
+
       try {
         ws.send(JSON.stringify(message.data));
-        console.log("[WS] flushed queued message:", message.data);
+        console.log("[WS] (FR) message en file envoyé :", message.data);
       } catch (e) {
-        console.error("[WS] flush send error:", e);
+        console.error("[WS] (FR) erreur lors de l'envoi en file :", e);
         // Re-queue message with incremented retry count
         message.retries++;
         if (message.retries < MAX_RETRIES) {
@@ -180,7 +183,7 @@ function createSocket() {
     try {
       if (typeof ev.data !== "string") return;
       const data = JSON.parse(ev.data);
-      
+
       // Handle pong response
       if (data.type === "pong") {
         if (heartbeatTimeout) {
@@ -189,8 +192,8 @@ function createSocket() {
         }
         return;
       }
-      
-      console.log("[WS] received message:", data.type);
+
+      console.log("[WS] (FR) message reçu :", data.type);
       listeners.forEach((fn) => {
         try {
           fn(data);
@@ -199,19 +202,19 @@ function createSocket() {
         }
       });
     } catch (e) {
-      console.error("[WS] invalid json message:", e);
+      console.error("[WS] (FR) message json invalide :", e);
     }
   };
 
   ws.onclose = (ev) => {
-    console.warn("[WS] onclose", ev.code, ev.reason);
+    console.warn("[WS] (FR) onclose", ev.code, ev.reason);
     ws = null;
     connectInProgress = false;
     stopHeartbeat();
-    
-    updateConnectionState({ 
-      isConnected: false, 
-      isConnecting: false 
+
+    updateConnectionState({
+      isConnected: false,
+      isConnecting: false,
     });
 
     // Schedule reconnection with exponential backoff
@@ -220,23 +223,25 @@ function createSocket() {
     }
     const delay = getReconnectDelay(connectionState.reconnectAttempts);
     connectionState.reconnectAttempts++;
-    
-    console.log(`[WS] Scheduling reconnection in ${delay}ms (attempt ${connectionState.reconnectAttempts})`);
-    
+
+    console.log(
+      `[WS] (FR) Reconnexion planifiée dans ${delay}ms (tentative ${connectionState.reconnectAttempts})`,
+    );
+
     reconnectTimeout = setTimeout(() => {
       reconnectTimeout = null;
-      console.log("[WS] reconnecting...");
+      console.log("[WS] (FR) reconnexion...");
       createSocket();
     }, delay);
   };
 
   ws.onerror = (err) => {
-    console.error("[WS] onerror", err);
-    updateConnectionState({ 
-      isConnected: false, 
-      isConnecting: false 
+    console.error("[WS] (FR) onerror", err);
+    updateConnectionState({
+      isConnected: false,
+      isConnecting: false,
     });
-    
+
     try {
       ws?.close();
     } catch {}
@@ -252,7 +257,10 @@ export function getWS() {
 
 export function subscribeWS(fn: (data: Record<string, unknown>) => void) {
   listeners.push(fn);
-  console.log("[WS] subscribe, total listeners =", listeners.length);
+  console.log(
+    "[WS] (FR) Abonnement, nombre total d'abonnés =",
+    listeners.length,
+  );
   // ensure socket is created
   getWS();
 
@@ -262,7 +270,10 @@ export function subscribeWS(fn: (data: Record<string, unknown>) => void) {
     if (index > -1) {
       listeners.splice(index, 1);
     }
-    console.log("[WS] unsubscribe, total listeners =", listeners.length);
+    console.log(
+      "[WS] (FR) Désabonnement, nombre total d'abonnés =",
+      listeners.length,
+    );
   };
 }
 
@@ -270,7 +281,7 @@ export function subscribeConnectionState(fn: (state: ConnectionState) => void) {
   stateListeners.push(fn);
   // Send current state immediately
   fn(connectionState);
-  
+
   return () => {
     const index = stateListeners.indexOf(fn);
     if (index > -1) {
@@ -298,20 +309,20 @@ export function sendWS(obj: Record<string, unknown>) {
   try {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       // queue it
-      console.log("[WS] not open, queueing:", obj);
+      console.log("[WS] (FR) Socket non ouvert, mise en file :", obj);
       sendQueue.push(message);
       cleanQueue(); // Clean old messages
-      
+
       // ensure socket exists / tries to connect
       if (!ws && !connectInProgress) createSocket();
       return false;
     }
-    
+
     ws.send(JSON.stringify(obj));
-    console.log("[WS] sent:", obj);
+    console.log("[WS] (FR) envoyé :", obj);
     return true;
   } catch (e) {
-    console.error("[WS] send error, queueing:", e, obj);
+    console.error("[WS] (FR) erreur d'envoi, mise en file :", e, obj);
     sendQueue.push(message);
     cleanQueue(); // Clean old messages
     return false;
@@ -320,43 +331,49 @@ export function sendWS(obj: Record<string, unknown>) {
 
 // Force reconnection (useful for debugging or manual recovery)
 export function forceReconnect() {
-  console.log("[WS] Force reconnecting...");
-  
+  console.log("[WS] (FR) Reconnexion forcée...");
+
   // Clear existing timers
   clearAllTimers();
-  
+
   // Close existing connection
   if (ws) {
     try {
       ws.close();
     } catch (e) {
-      console.warn("[WS] Error closing socket for reconnect:", e);
+      console.warn(
+        "[WS] (FR) Erreur lors de la fermeture du socket pour reconnexion :",
+        e,
+      );
     }
   }
-  
+
   // Reset state
   ws = null;
   connectInProgress = false;
   connectionState.reconnectAttempts = 0;
-  
+
   // Start new connection
   createSocket();
 }
 
 // Cleanup function for component unmounting
 export function cleanup() {
-  console.log("[WS] Cleaning up WebSocket connection");
-  
+  console.log("[WS] (FR) Nettoyage de la connexion WebSocket");
+
   clearAllTimers();
-  
+
   if (ws) {
     try {
       ws.close();
     } catch (e) {
-      console.warn("[WS] Error closing socket during cleanup:", e);
+      console.warn(
+        "[WS] (FR) Erreur lors de la fermeture du socket pendant le nettoyage :",
+        e,
+      );
     }
   }
-  
+
   ws = null;
   connectInProgress = false;
   listeners.length = 0;

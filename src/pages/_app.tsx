@@ -11,7 +11,9 @@ import { useEffect } from "react";
 
 const ENV = process.env.NODE_ENV || "development";
 const DOMAIN =
-  ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+  ENV === "production"
+    ? "https://pixelwar-hubdurp.fr"
+    : "http://localhost:3000";
 
 type AppPropsWithAuth = AppProps & {
   pageProps: {
@@ -24,7 +26,7 @@ export default function App({
   pageProps: { session, ...pageProps },
 }: AppPropsWithAuth) {
   useEffect(() => {
-    console.log("[ENV]", ENV, " - DOMAIN:", DOMAIN);
+    console.log("[ENV] (FR)", ENV, " - DOMAINE :", DOMAIN);
 
     // Vérifier si l'intervalle de capture n'est pas déjà actif
     if (
@@ -34,9 +36,9 @@ export default function App({
       const capture = async () => {
         try {
           await fetch("/api/capture", { method: "POST" });
-          console.log("Capture API called successfully.");
+          console.log("Capture API appelée avec succès.");
         } catch (error: unknown) {
-          console.error("Error calling Capture API:", error);
+          console.error("Erreur lors de l'appel à l'API Capture :", error);
         }
       };
 

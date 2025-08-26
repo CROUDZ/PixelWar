@@ -31,20 +31,17 @@ const ColorSelectorPanel: React.FC<ColorSelectorPanelProps> = ({
           <X size={16} />
         </button>
       </div>
-      
+
       <div className="space-y-3">
         <div className="text-sm text-gray-600 dark:text-gray-400">
           Couleur sélectionnée:
         </div>
-        <div 
+        <div
           className="w-full h-8 rounded-lg border-2 border-gray-300 dark:border-gray-600"
           style={{ backgroundColor: selectedColor }}
         />
-        
-        <PixelSelector
-          onSelect={onColorChange}
-          initial={selectedColor}
-        />
+
+        <PixelSelector onSelect={onColorChange} initial={selectedColor} />
       </div>
     </div>
   );

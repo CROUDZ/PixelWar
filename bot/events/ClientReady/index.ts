@@ -13,7 +13,7 @@ const clientReadyEvent = {
       ) as ApplicationCommandDataResolvable[],
     );
 
-    console.log(`Ready! Logged in as ${client.user?.tag}`);
+    console.log(`Prêt ! Connecté en tant que ${client.user?.tag}`);
   },
 };
 

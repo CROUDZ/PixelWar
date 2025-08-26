@@ -163,11 +163,11 @@ export const authOptions: NextAuthOptions = {
             "info",
           );
           console.log(
-            `[auth.ts] signIn: User ${discordProfile.username} (${discordProfile.id}) signed in.`,
+            `[auth.ts] (FR) signIn : Utilisateur ${discordProfile.username} (${discordProfile.id}) connecté.`,
           );
         } catch (error) {
           console.error(
-            "Erreur lors de l'ajout de l'utilisateur au serveur Discord:",
+            "Erreur lors de l'ajout de l'utilisateur au serveur Discord :",
             error,
           );
           return false; // Échec de la connexion si l'ajout échoue

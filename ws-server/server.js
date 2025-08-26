@@ -14,10 +14,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 config({ path: resolve(__dirname, "../.env") });
 
-// --- Configs ---
+// --- Configurations ---
 const PORT = Number(process.env.WS_PORT || 8080);
-const GRID_KEY = process.env.GRID_KEY || "pixel-grid"; // legacy JSON key
+const GRID_KEY = process.env.GRID_KEY || "pixel-grid"; // clé JSON héritée
 const QUEUE_KEY = process.env.QUEUE_KEY || "pixel-queue";
+const PALETTE_KEY = process.env.PALETTE_KEY || `${GRID_KEY}:palette`;
 const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFF";
 
 const FLUSH_INTERVAL_MS = Number(process.env.FLUSH_INTERVAL_MS || 100);
@@ -35,9 +36,10 @@ client.on("error", (e) => console.error(`Erreur client Redis : ${e.message}`));
 const sub = new IORedis(redisUrl);
 sub.on("error", (e) => console.error(`Erreur ioredis (sub) : ${e.message}`));
 
-// subscribe channels already used in your code
+// s'abonner aux canaux déjà utilisés dans votre code
 sub.subscribe("logout", (err, count) => {
-  if (err) console.error(`Erreur d'abonnement au canal logout : ${err.message}`);
+  if (err)
+    console.error(`Erreur d'abonnement au canal logout : ${err.message}`);
   else console.log(`Abonné au canal logout (${count} abonnés).`);
 });
 sub.subscribe("link", (err, count) => {
@@ -45,19 +47,26 @@ sub.subscribe("link", (err, count) => {
   else console.log(`Abonné au canal link (${count} abonnés).`);
 });
 sub.subscribe("canvas-clear", (err, count) => {
-  if (err) console.error(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
+  if (err)
+    console.error(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
   else console.log(`Abonné au canal canvas-clear (${count} abonnés).`);
 });
 
 sub.on("message", (channel, message) => {
   console.log(`Message reçu sur le canal ${channel} : ${message}`);
-  // --- leave your existing handlers unchanged (copié depuis ton code) ---
+  if (!canvas || !palette) {
+    console.warn(
+      "Message Redis reçu mais canvas/palette pas encore initialisés — ignoring for now",
+    );
+    return;
+  }
+  // --- laissez vos gestionnaires existants inchangés (copié depuis votre code) ---
   if (channel === "logout") {
     try {
       const { userId } = JSON.parse(message);
-      console.log(`L'utlilisateur avec l'ID ${userId} s'est déconnecté.`);
-      // Log to console
-      console.log("[server.js] logout event for userId:", userId);
+      console.log(`L'utilisateur avec l'ID ${userId} s'est déconnecté.`);
+      // Enregistrer dans la console
+      console.log("[server.js] événement de déconnexion pour userId:", userId);
 
       const set = userSockets.get(String(userId));
       if (set && set.size > 0) {
@@ -69,15 +78,18 @@ sub.on("message", (channel, message) => {
               set.delete(s);
             }
           } catch (e) {
-            console.error("[server.js] failed to send logout to socket:", e);
+            console.error(
+              "[server.js] échec de l'envoi de déconnexion au socket:",
+              e,
+            );
           }
         }
         if (set.size === 0) userSockets.delete(String(userId));
       } else {
-        console.log("[server.js] no ws found for user", userId);
+        console.log("[server.js] aucun ws trouvé pour l'utilisateur", userId);
       }
     } catch (e) {
-      console.error("Invalid logout payload:", e);
+      console.error("Charge utile de déconnexion invalide:", e);
     }
   }
 
@@ -88,9 +100,9 @@ sub.on("message", (channel, message) => {
         const discordId = String(payload.userId);
         console.log(`L'utilisateur avec l'ID Discord ${discordId} a été lié.`);
         console.log(
-          "[server.js] link event for discordId:",
+          "[server.js] événement de liaison pour discordId:",
           discordId,
-          "payload:",
+          "charge utile:",
           payload,
         );
 
@@ -100,9 +112,15 @@ sub.on("message", (channel, message) => {
             where: { provider: "discord", providerAccountId: discordId },
             select: { id: true, userId: true, providerAccountId: true },
           });
-          console.log("[server.js] prisma: account lookup result:", account);
+          console.log(
+            "[server.js] prisma: résultat de recherche de compte:",
+            account,
+          );
         } catch (e) {
-          console.error("[server.js] prisma error while finding account:", e);
+          console.error(
+            "[server.js] erreur prisma lors de la recherche de compte:",
+            e,
+          );
         }
 
         if (!account) {
@@ -116,14 +134,17 @@ sub.on("message", (channel, message) => {
               data: { linked: true },
             });
             console.log(
-              `[server.js] prisma: user ${account.userId} updated linked=true`,
+              `[server.js] prisma: utilisateur ${account.userId} mis à jour linked=true`,
               {
                 updatedId: updated.id,
                 linked: updated.linked,
               },
             );
           } catch (e) {
-            console.error("[server.js] prisma update error for link:", e);
+            console.error(
+              "[server.js] erreur de mise à jour prisma pour la liaison:",
+              e,
+            );
           }
         }
 
@@ -143,7 +164,7 @@ sub.on("message", (channel, message) => {
                 notifiedSocketIds.add(s._id);
               } catch (e) {
                 console.error(
-                  "[server.js] failed to send linked to socket:",
+                  "[server.js] échec de l'envoi de liaison au socket:",
                   e,
                 );
               }
@@ -163,7 +184,10 @@ sub.on("message", (channel, message) => {
           }
         }
       } catch (e) {
-        console.error("[server.js] invalid link payload or error:", e);
+        console.error(
+          "[server.js] charge utile de liaison invalide ou erreur:",
+          e,
+        );
       }
     })();
     return;
@@ -173,26 +197,30 @@ sub.on("message", (channel, message) => {
     (async () => {
       try {
         const payload = JSON.parse(message);
-        console.log("[server.js] canvas-clear event:", payload);
+        console.log("[server.js] événement canvas-clear:", payload);
 
-        // Reset total pixels counter
+        // Réinitialiser le compteur total de pixels
         totalPixels = 0;
 
-        // *** IMPORTANT: Reset the server's internal canvas to empty state ***
-        const emptySnap = new Uint8Array(payload.width * payload.height); // All pixels = 0 (default color ID)
+        // *** IMPORTANT: Réinitialiser le canvas interne du serveur à l'état vide ***
+        const emptySnap = new Uint8Array(payload.width * payload.height); // Tous les pixels = 0 (ID de couleur par défaut)
         canvas.restore(emptySnap);
-        
-        // Reset palette to ensure default color is ID 0
+
+        // Réinitialiser la palette pour s'assurer que la couleur par défaut est l'ID 0
         palette.colorToId.clear();
         palette.idToColor = [];
         palette._registerColor(payload.defaultColor);
-        
-        console.log(`[server.js] Internal canvas reset to empty state (${payload.width}x${payload.height})`);
 
-        // Create empty grid with default color for client compatibility
-        const emptyGrid = payload.grid || new Array(payload.width * payload.height).fill(payload.defaultColor);
+        console.log(
+          `[server.js] Canvas interne réinitialisé à l'état vide (${payload.width}x${payload.height})`,
+        );
 
-        // Broadcast canvas clear to all connected clients
+        // Créer une grille vide avec la couleur par défaut pour la compatibilité client
+        const emptyGrid =
+          payload.grid ||
+          new Array(payload.width * payload.height).fill(payload.defaultColor);
+
+        // Diffuser l'effacement du canvas à tous les clients connectés
         const clearMessage = {
           type: "canvasClear",
           timestamp: payload.timestamp,
@@ -200,35 +228,50 @@ sub.on("message", (channel, message) => {
           height: payload.height,
           grid: emptyGrid,
           totalPixels: 0,
-          clearedBy: payload.adminId
+          clearedBy: payload.adminId,
         };
 
-        // Send to all connected websockets
+        // Envoyer à tous les websockets connectés
         if (wss && wss.clients) {
           for (const client of wss.clients) {
-            if (client.readyState === 1) { // WebSocket.OPEN
+            if (client.readyState === 1) {
+              // WebSocket.OPEN
               try {
                 client.send(JSON.stringify(clearMessage));
               } catch (e) {
-                console.warn("[server.js] Failed to send canvas clear to client:", e);
+                console.warn(
+                  "[server.js] Échec de l'envoi de l'effacement du canvas au client:",
+                  e,
+                );
               }
             }
           }
-          console.log(`[server.js] Canvas clear broadcasted to ${wss.clients.size} clients`);
+          console.log(
+            `[server.js] Effacement du canvas diffusé à ${wss.clients.size} clients`,
+          );
         } else {
-          console.warn("[server.js] WebSocket server not ready, cannot broadcast canvas clear");
+          console.warn(
+            "[server.js] Serveur WebSocket pas prêt, impossible de diffuser l'effacement du canvas",
+          );
         }
-        
-        // Immediately save the empty state to Redis to ensure persistence
+
+        // Sauvegarder immédiatement l'état vide dans Redis pour assurer la persistance
         try {
           await saveToRedis(canvas);
-          console.log("[server.js] Empty canvas state saved to Redis persistence");
+          console.log(
+            "[server.js] État de canvas vide sauvegardé dans la persistance Redis",
+          );
         } catch (e) {
-          console.error("[server.js] Failed to save empty canvas to Redis:", e);
+          console.error(
+            "[server.js] Échec de la sauvegarde du canvas vide dans Redis:",
+            e,
+          );
         }
-        
       } catch (e) {
-        console.error("[server.js] invalid canvas-clear payload or error:", e);
+        console.error(
+          "[server.js] charge utile canvas-clear invalide ou erreur:",
+          e,
+        );
       }
     })();
     return;
@@ -238,13 +281,17 @@ sub.on("message", (channel, message) => {
 // --- Prisma ---
 const prisma = new PrismaClient();
 
-// --- User sockets map (identique à ton code) ---
+// --- Carte des sockets utilisateur (identique à votre code) ---
 const userSockets = new Map();
 
-// --- Global WebSocket server reference ---
+// --- Référence globale du serveur WebSocket ---
 let wss = null;
 
-// helpers add/remove user sockets (copiés)
+// --- Variables globales pour canvas et palette ---
+let canvas = null;
+let palette = null;
+
+// assistants ajouter/supprimer des sockets utilisateur (copiés)
 function addUserSocket(userId, ws) {
   let set = userSockets.get(userId);
   if (!set) {
@@ -254,7 +301,7 @@ function addUserSocket(userId, ws) {
   set.add(ws);
   ws.userId = userId;
   console.log(
-    `[server.js] addUserSocket: ${userId} -> now ${set.size} socket(s)`,
+    `[server.js] addUserSocket: ${userId} -> maintenant ${set.size} socket(s)`,
   );
 }
 function removeUserSocket(ws) {
@@ -264,15 +311,15 @@ function removeUserSocket(ws) {
   if (!set) return;
   set.delete(ws);
   console.log(
-    `[server.js] removeUserSocket: ${userId} -> remaining ${set.size} socket(s)`,
+    `[server.js] removeUserSocket: ${userId} -> restant ${set.size} socket(s)`,
   );
   if (set.size === 0) {
     userSockets.delete(userId);
-    console.log(`[server.js] removed user mapping for ${userId}`);
+    console.log(`[server.js] mappage utilisateur supprimé pour ${userId}`);
   }
 }
 
-// --- metrics & init ---
+// --- métriques et initialisation ---
 let totalPixels = 0;
 async function initCounter() {
   console.log("Initialisation du compteur de pixels...");
@@ -285,15 +332,15 @@ async function initCounter() {
 initCounter();
 
 // ----------------------------
-// Palette manager (dynamique)
+// Gestionnaire de palette (dynamique)
 // ----------------------------
-// map couleur string <-> id (0..255). id 0 reserved for DEFAULT_COLOR
+// map couleur string <-> id (0..255). id 0 réservé pour DEFAULT_COLOR
 class PaletteManager {
   constructor(defaultColor = "#FFFFFF") {
     this.colorToId = new Map();
     this.idToColor = [];
     this.defaultColor = defaultColor;
-    // init id 0 as default
+    // initialiser id 0 comme défaut
     this._registerColor(defaultColor);
   }
 
@@ -302,7 +349,7 @@ class PaletteManager {
     if (this.colorToId.has(hex)) return this.colorToId.get(hex);
     const id = this.idToColor.length;
     if (id >= 256) {
-      // palette full -> fallback to default
+      // palette pleine -> retour à la valeur par défaut
       return 0;
     }
     this.idToColor.push(hex);
@@ -321,7 +368,6 @@ class PaletteManager {
     return this.idToColor[id] ?? this.defaultColor;
   }
 
-  // convert an array of color-strings to a Uint8Array using dynamic palette
   arrayStringsToSnapshot(arr, width, height) {
     const snap = new Uint8Array(width * height);
     for (let i = 0; i < snap.length; i++) {
@@ -331,7 +377,6 @@ class PaletteManager {
     return snap;
   }
 
-  // convert snapshot Uint8Array -> array of strings
   snapshotToArrayStrings(snapshot) {
     const out = new Array(snapshot.length);
     for (let i = 0; i < snapshot.length; i++) {
@@ -339,125 +384,178 @@ class PaletteManager {
     }
     return out;
   }
+
+  // --- Nouveaux helpers pour persistence ---
+  toArray() {
+    // retourne la table id->color (index = id)
+    return Array.from(this.idToColor);
+  }
+
+  restoreFromArray(arr) {
+    if (!Array.isArray(arr)) return;
+    this.idToColor = arr.map((v) => String(v).toUpperCase());
+    this.colorToId = new Map();
+    for (let i = 0; i < this.idToColor.length; i++) {
+      this.colorToId.set(this.idToColor[i], i);
+    }
+    // s'assurer que id 0 est bien defaultColor
+    if (this.idToColor[0] !== String(this.defaultColor).toUpperCase()) {
+      // forcer l'entrée 0 à default (sécurité)
+      this.idToColor[0] = String(this.defaultColor).toUpperCase();
+      this.colorToId.set(this.idToColor[0], 0);
+    }
+  }
 }
 
 (async () => {
   await client.connect();
   console.log("Connexion à Redis réussie (client)");
 
-  // --- Load canvas snapshot (try binary first via loadFromRedis) ---
-  let canvas;
-  const palette = new PaletteManager(DEFAULT_COLOR);
+  // --- Charger l'instantané du canvas (essayer d'abord le binaire via loadFromRedis) ---
+  palette = new PaletteManager(DEFAULT_COLOR);
 
-  try {
-    const snap = await loadFromRedis(WIDTH, HEIGHT).catch(() => undefined);
-    if (snap && snap instanceof Uint8Array && snap.length === WIDTH * HEIGHT) {
-      // Great — we have binary snapshot (ids)
-      canvas = new PixelCanvas(WIDTH, HEIGHT, snap);
-      // We need to ensure palette has entries for ids present.
-      // If persistence saved only raw bytes, we don't know color strings -> fallback to defaultColor for all ids > 0
-      // (Assumption: previous save used same palette scheme)
-      console.log("Loaded binary snapshot from persistence (Uint8Array).");
-    } else {
-      // fallback: try legacy GRID_KEY JSON (array of color strings)
-      const raw = await client.get(GRID_KEY);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length === WIDTH * HEIGHT) {
-            const snapFromStrings = palette.arrayStringsToSnapshot(
-              parsed,
-              WIDTH,
-              HEIGHT,
-            );
-            canvas = new PixelCanvas(WIDTH, HEIGHT, snapFromStrings);
-            console.log(
-              "Loaded legacy GRID_KEY JSON and converted to PixelCanvas.",
-            );
-          } else {
-            throw new Error("Bad grid shape or invalid legacy grid.");
-          }
-        } catch (e) {
-          console.warn(
-            "Legacy GRID_KEY invalid — initializing new canvas:",
-            e.message || e,
-          );
-          const emptySnap = new Uint8Array(WIDTH * HEIGHT); // filled with 0 (default color)
-          // ensure default color id is registered
-          palette.getId(DEFAULT_COLOR);
-          canvas = new PixelCanvas(WIDTH, HEIGHT, emptySnap);
-          // mark all dirty so clients resync if needed
-          canvas.drainDirtyChunks(); // just to be explicit; you can mark dirty manually if needed
-        }
-      } else {
-        // nothing found — start fresh
-        const emptySnap = new Uint8Array(WIDTH * HEIGHT);
-        palette.getId(DEFAULT_COLOR);
-        canvas = new PixelCanvas(WIDTH, HEIGHT, emptySnap);
-        console.log("No grid found — started new empty PixelCanvas.");
-      }
-    }
-  } catch (e) {
-    console.error(
-      "Error while loading initial snapshot — initializing empty canvas:",
-      e,
+  // 1) Fix immédiat - charger le canvas seulement si la palette est cohérente
+  const snap = await loadFromRedis(WIDTH, HEIGHT).catch(() => undefined);
+
+  const rawGrid = await client.get(GRID_KEY).catch(() => null);
+  const paletteRaw = await client.get(PALETTE_KEY).catch(() => null);
+
+  // Logs d'instrumentation pour débugger
+  console.log(
+    "redis keys: GRID_KEY exists:",
+    !!rawGrid,
+    ", PALETTE_KEY exists:",
+    !!paletteRaw,
+    ", snap length:",
+    snap ? snap.length : 0,
+  );
+  if (paletteRaw)
+    console.log(
+      "PALETTE sample (first 10 ids):",
+      JSON.parse(paletteRaw).slice(0, 10),
     );
+
+  // 1) Si on a snapshot binaire ET palette persistée -> RESTAURE les deux
+  if (
+    snap &&
+    snap instanceof Uint8Array &&
+    snap.length === WIDTH * HEIGHT &&
+    paletteRaw
+  ) {
+    try {
+      const parsedPalette = JSON.parse(paletteRaw);
+      if (Array.isArray(parsedPalette)) {
+        palette.restoreFromArray(parsedPalette);
+        console.log("Palette restaurée depuis Redis.");
+        canvas = new PixelCanvas(WIDTH, HEIGHT, snap);
+        console.log(
+          "Instantané binaire + palette chargés depuis la persistance.",
+        );
+      } else {
+        throw new Error("PALETTE_KEY invalide");
+      }
+    } catch (e) {
+      console.warn(
+        "PALETTE_KEY corrompu -> fallback vers GRID_KEY ou vide:",
+        e.message,
+      );
+    }
+  }
+
+  // 2) Sinon si on a un GRID_KEY valide (JSON de couleurs) -> utiliser ça (garantit correspondance couleurs)
+  if (!canvas && rawGrid) {
+    try {
+      const parsed = JSON.parse(rawGrid);
+      if (Array.isArray(parsed) && parsed.length === WIDTH * HEIGHT) {
+        const snapFromStrings = palette.arrayStringsToSnapshot(
+          parsed,
+          WIDTH,
+          HEIGHT,
+        );
+        canvas = new PixelCanvas(WIDTH, HEIGHT, snapFromStrings);
+        console.log("JSON GRID_KEY hérité chargé et converti en PixelCanvas.");
+      } else {
+        throw new Error("GRID_KEY invalide");
+      }
+    } catch (e) {
+      console.warn(
+        "GRID_KEY invalide -> démarrage d'un canvas vide:",
+        e.message,
+      );
+    }
+  }
+
+  // 3) Sinon -> canvas vide
+  if (!canvas) {
     const emptySnap = new Uint8Array(WIDTH * HEIGHT);
     palette.getId(DEFAULT_COLOR);
     canvas = new PixelCanvas(WIDTH, HEIGHT, emptySnap);
+    console.log("Aucune grille fiable trouvée — PixelCanvas vide démarré.");
   }
 
-  // --- utility: convert x,y to index (same as PixelCanvas.index but private here if needed) ---
+  // --- utilitaire: convertir x,y en index (identique à PixelCanvas.index mais privé ici si nécessaire) ---
   /*function idxOf(x, y) {
     return y * WIDTH + x;
   }*/
 
-  // --- Debounced save: save binary snapshot + optionally update legacy GRID_KEY JSON (compat) ---
+  // --- Sauvegarde avec anti-rebond: sauvegarder l'instantané binaire + optionnellement mettre à jour le JSON GRID_KEY hérité (compat) ---
   let saveScheduled = false;
   function scheduleSaveGrid() {
     if (saveScheduled) return;
     saveScheduled = true;
     setTimeout(async () => {
       try {
-        // save binary snapshot (recommended)
+        // sauvegarder l'instantané binaire (recommandé)
         await saveToRedis(canvas).catch((e) => {
-          console.error("saveToRedis failed:", e);
+          console.error("saveToRedis a échoué:", e);
         });
 
-        // Also update legacy GRID_KEY as JSON of color-strings (for compatibility)
+        // Mettre à jour aussi le GRID_KEY hérité en tant que JSON de chaînes de couleur (pour la compatibilité)
         try {
-          // convert snapshot to array of strings (careful with large memory; we keep it since old code did the same)
           const arr = palette.snapshotToArrayStrings(canvas.snapshot());
-          await client.set(GRID_KEY, JSON.stringify(arr));
+          const paletteArr = palette.toArray();
+
+          // Sauvegarde atomique avec transaction Redis
+          const multi = client.multi();
+          multi.set(GRID_KEY, JSON.stringify(arr));
+          multi.set(PALETTE_KEY, JSON.stringify(paletteArr));
+          await multi.exec();
+
+          console.log(
+            "JSON GRID_KEY et PALETTE_KEY mis à jour de manière atomique.",
+          );
         } catch (e) {
-          console.error("Failed to write legacy GRID_KEY JSON (compat):", e);
+          console.error(
+            "Erreur lors de l'écriture atomique du JSON GRID_KEY/PALETTE_KEY:",
+            e,
+          );
         }
       } catch (e) {
-        console.error("Redis autosave failed:", e);
+        console.error("Échec de la sauvegarde automatique Redis:", e);
       } finally {
         saveScheduled = false;
       }
     }, GRID_SAVE_DEBOUNCE_MS);
   }
 
-  // --- WebSocket server ---
+  // --- Serveur WebSocket ---
   wss = new WebSocketServer({ port: PORT }, () => {
-    console.log("WebSocket server démarré sur ws://0.0.0.0:${PORT}");
+    console.log(`Serveur WebSocket démarré sur ws://0.0.0.0:${PORT}`);
   });
 
-  // --- Queue push helper (same logic) ---
+  // --- Assistant de poussée de file (même logique) ---
   async function pushToQueue(item) {
     try {
       await client.rPush(QUEUE_KEY, JSON.stringify(item));
     } catch (e) {
       console.error(
-        "Failed to push to Redis queue, fallback to in-memory (risky):",
+        "Échec de la poussée vers la file Redis, retour à la mémoire (risqué):",
         e,
       );
     }
   }
 
-  // --- Consumer flush (identique à ton code) ---
+  // --- Vidange du consommateur (identique à votre code) ---
   let flushing = false;
   async function flushRedisQueue() {
     if (flushing) return;
@@ -470,10 +568,15 @@ class PaletteManager {
         return;
       }
 
-      console.log(`Flushing ${items.length} item(s) from Redis queue to DB...`);
-      console.log(`Items:`, items.slice(0, 10).map((s) => JSON.parse(s)));
+      console.log(
+        `Vidange de ${items.length} élément(s) de la file Redis vers la DB...`,
+      );
+      console.log(
+        `Éléments:`,
+        items.slice(0, 10).map((s) => JSON.parse(s)),
+      );
 
-      // Trim list
+      // Couper la liste
       await client.lTrim(QUEUE_KEY, items.length, -1);
 
       const toWrite = items
@@ -494,10 +597,10 @@ class PaletteManager {
       const payload = toWrite.map((p) => ({
         x: p.x,
         y: p.y,
-        color: p.color, // color string — we persisted strings to queue
+        color: p.color, // chaîne de couleur — nous avons persisté les chaînes dans la file
         userId: p.userId ?? null,
-        name: p.name ?? null, // optional name
-        avatar: p.avatar ?? null, // optional avatar
+        name: p.name ?? null, // nom optionnel
+        avatar: p.avatar ?? null, // avatar optionnel
       }));
 
       const userIds = Array.from(
@@ -519,23 +622,26 @@ class PaletteManager {
       });
 
       console.log(
-        `Flushed ${payload.length} pixel(s) to DB (users updated: ${userIds.length})`,
+        `${payload.length} pixel(s) vidangé(s) vers la DB (utilisateurs mis à jour: ${userIds.length})`,
       );
     } catch (err) {
-      console.error("Error flushing Redis queue to DB:", err);
-      // attempt to requeue
+      console.error(
+        "Erreur lors de la vidange de la file Redis vers la DB:",
+        err,
+      );
+      // tentative de remise en file
       try {
         if (items && items.length > 0) {
           for (const s of items) {
             try {
               await client.rPush(QUEUE_KEY, s);
             } catch (e) {
-              console.error("Failed to requeue item:", e);
+              console.error("Échec de la remise en file de l'élément:", e);
             }
           }
         }
       } catch (e) {
-        console.error("Re-queue attempt failed:", e);
+        console.error("Tentative de remise en file échouée:", e);
       }
     } finally {
       flushing = false;
@@ -546,7 +652,7 @@ class PaletteManager {
     void flushRedisQueue();
   }, FLUSH_INTERVAL_MS);
 
-  // --- Graceful shutdown ---
+  // --- Arrêt gracieux ---
   async function gracefulShutdown() {
     console.log(
       "Arrêt du serveur - sauvegarde de la grille et vidage de la file Redis...",
@@ -560,7 +666,7 @@ class PaletteManager {
         console.log("Longueur de la file restante :", remaining);
         if (remaining === 0) break;
       } catch (e) {
-        console.error("Error during shutdown flush attempt:", e);
+        console.error("Erreur lors de la tentative de vidange d'arrêt:", e);
       }
       await new Promise((r) => setTimeout(r, 300));
     }
@@ -569,30 +675,41 @@ class PaletteManager {
       await saveToRedis(canvas);
       console.log("Grille sauvegardée dans la persistance (binaire).");
     } catch (e) {
-      console.error("Error saving canvas on shutdown:", e);
+      console.error("Erreur lors de la sauvegarde du canvas à l'arrêt:", e);
     }
 
     try {
-      // update legacy JSON too
+      // mettre à jour aussi le JSON hérité de manière atomique
       const arr = palette.snapshotToArrayStrings(canvas.snapshot());
-      await client.set(GRID_KEY, JSON.stringify(arr));
-      console.log("JSON GRID_KEY mis à jour lors de l'arrêt.");
+      const paletteArr = palette.toArray();
+
+      const multi = client.multi();
+      multi.set(GRID_KEY, JSON.stringify(arr));
+      multi.set(PALETTE_KEY, JSON.stringify(paletteArr));
+      await multi.exec();
+
+      console.log(
+        "JSON GRID_KEY et PALETTE_KEY mis à jour de manière atomique lors de l'arrêt.",
+      );
     } catch (e) {
-      console.error("Error writing legacy GRID_KEY JSON on shutdown:", e);
+      console.error(
+        "Erreur lors de l'écriture atomique du JSON GRID_KEY/PALETTE_KEY à l'arrêt:",
+        e,
+      );
     }
 
     try {
       await client.quit();
       console.log("Déconnexion de Redis réussie.");
     } catch (e) {
-      console.error("Error disconnecting Redis:", e);
+      console.error("Erreur lors de la déconnexion Redis:", e);
     }
 
     try {
       await prisma.$disconnect();
       console.log("Déconnexion de Prisma réussie.");
     } catch (e) {
-      console.error("Error disconnecting Prisma:", e);
+      console.error("Erreur lors de la déconnexion Prisma:", e);
     }
 
     process.exit(0);
@@ -601,14 +718,14 @@ class PaletteManager {
   process.on("SIGINT", gracefulShutdown);
   process.on("SIGTERM", gracefulShutdown);
 
-  // --- Helper: validate incoming placePixel (accept color string or id) ---
+  // --- Assistant: valider le placePixel entrant (accepter chaîne de couleur ou id) ---
   function validatePlacePixel(data) {
     if (!data || data.type !== "placePixel") return null;
     const x = Number(data.x);
     const y = Number(data.y);
-    const color = data.color; // can be string like "#AABBCC" or number
+    const color = data.color; // peut être une chaîne comme "#AABBCC" ou un nombre
     const userId = data.userId ?? null;
-    const name = data.name ?? null; // optional name
+    const name = data.name ?? null; // nom optionnel
     const avatar = data.avatar ?? null;
     const isAdmin = Boolean(data.isAdmin);
     if (
@@ -618,10 +735,18 @@ class PaletteManager {
     )
       return null;
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return null;
-    return { x: Math.trunc(x), y: Math.trunc(y), color, userId, isAdmin, name, avatar };
+    return {
+      x: Math.trunc(x),
+      y: Math.trunc(y),
+      color,
+      userId,
+      isAdmin,
+      name,
+      avatar,
+    };
   }
 
-  // --- Broadcast helper (keep previous behaviour) ---
+  // --- Assistant de diffusion (garder le comportement précédent) ---
   function broadcast(obj) {
     const raw = JSON.stringify(obj);
     for (const c of wss.clients) {
@@ -629,19 +754,24 @@ class PaletteManager {
         try {
           c.send(raw);
         } catch (e) {
-          console.warn("Failed to send message to client:", c._id, e);
+          console.warn("Échec de l'envoi du message au client:", c._id, e);
         }
       }
     }
   }
 
-  // --- Connection handling ---
+  // --- Gestion des connexions ---
   wss.on("connection", (ws) => {
     ws._id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // send init (grid snapshot) — we send legacy JSON array of color-strings to avoid breaking clients
+    // envoyer init (instantané de grille) — nous envoyons un tableau JSON hérité de chaînes de couleur pour éviter de casser les clients
     try {
       const gridStr = palette.snapshotToArrayStrings(canvas.snapshot());
+      totalPixels = gridStr.filter((c) => c !== DEFAULT_COLOR).length;
+      console.log(
+        `[WS ${ws._id}] nouvelle connexion, envoi de l'init...`,
+        totalPixels,
+      );
       ws.send(
         JSON.stringify({
           type: "init",
@@ -653,7 +783,7 @@ class PaletteManager {
         }),
       );
     } catch (e) {
-      console.warn("Failed to send init to client", e);
+      console.warn("Échec de l'envoi d'init au client", e);
     }
 
     ws.on("message", async (msg) => {
@@ -661,16 +791,16 @@ class PaletteManager {
       try {
         data = JSON.parse(msg.toString());
       } catch (e) {
-        console.warn("Invalid JSON from client:", ws._id, msg.toString(), e);
+        console.warn("JSON invalide du client:", ws._id, msg.toString(), e);
         return;
       }
 
-      // Handle heartbeat ping
+      // Gérer le ping de battement de cœur
       if (data.type === "ping") {
         try {
           ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
         } catch (e) {
-          console.error(`[WS ${ws._id}] Error sending pong:`, e);
+          console.error(`[WS ${ws._id}] Erreur lors de l'envoi du pong:`, e);
         }
         return;
       }
@@ -688,22 +818,22 @@ class PaletteManager {
           if (discordId) {
             addUserSocket(discordId, ws);
             console.log(
-              `[WS ${ws._id}] auth registered discordId=${discordId} token=${token}`,
+              `[WS ${ws._id}] auth enregistré discordId=${discordId} token=${token}`,
             );
           }
           if (internalId) {
             addUserSocket(internalId, ws);
             console.log(
-              `[WS ${ws._id}] auth registered internalUserId=${internalId} token=${token}`,
+              `[WS ${ws._id}] auth enregistré internalUserId=${internalId} token=${token}`,
             );
           }
         } catch (e) {
-          console.error("[WS] auth handling error:", e);
+          console.error("[WS] erreur de gestion d'auth:", e);
         }
         return;
       }
 
-      // Handle request for resync
+      // Gérer la demande de resynchronisation
       if (data.type === "requestInit") {
         try {
           const gridStr = palette.snapshotToArrayStrings(canvas.snapshot());
@@ -718,27 +848,36 @@ class PaletteManager {
             }),
           );
         } catch (e) {
-          console.error(`[WS ${ws._id}] Error sending resync:`, e);
+          console.error(`[WS ${ws._id}] Erreur lors de l'envoi de resync:`, e);
         }
         return;
       }
 
-      console.log(`[WS ${ws._id}] raw message:`, msg.toString());
-      console.log(`[WS ${ws._id}] parsed message:`, data);
+      console.log(`[WS ${ws._id}] message brut:`, msg.toString());
+      console.log(`[WS ${ws._id}] message analysé:`, data);
 
       if (data.type === "placePixel") {
         console.log(
-          `[WS ${ws._id}] received placePixel -> x=${data.x}, y=${data.y}, color=${data.color}, userId=${data.userId}`,
+          `[WS ${ws._id}] placePixel reçu -> x=${data.x}, y=${data.y}, couleur=${data.color}, userId=${data.userId}`,
         );
         const place = validatePlacePixel(data);
         if (!place) return;
 
-        // convert color to id (if string) or validate id
+        // convertir couleur en id (si chaîne) ou valider id
         let colorId;
         let colorString;
         if (typeof place.color === "string") {
+          const prevLen = palette.idToColor.length;
           colorString = String(place.color).toUpperCase();
           colorId = palette.getId(colorString);
+          if (palette.idToColor.length !== prevLen) {
+            console.log(
+              "Nouvelle couleur enregistrée dans la palette:",
+              colorString,
+              "-> id",
+              colorId,
+            );
+          }
         } else {
           colorId = Number(place.color) || 0;
           colorString = palette.getColor(colorId);
@@ -750,24 +889,24 @@ class PaletteManager {
         try {
           changed = canvas.setPixel(place.x, place.y, colorId);
           console.log(
-            `[server] canvas.setPixel returned: ${changed} for (${place.x},${place.y}) colorId=${colorId}`,
+            `[server] canvas.setPixel a retourné: ${changed} pour (${place.x},${place.y}) colorId=${colorId}`,
           );
         } catch (err) {
-          console.error("[server] setPixel error:", err);
+          console.error("[server] erreur setPixel:", err);
           changed = false;
         }
 
         if (!changed) {
           console.log(
-            "[server] no change (same color) — skipping queue & broadcast",
+            "[server] aucun changement (même couleur) — ignorer la file et la diffusion",
           );
           return;
         }
 
-        // schedule debounced save
+        // programmer la sauvegarde avec anti-rebond
         scheduleSaveGrid();
 
-        // push event to Redis queue with color string (keeps DB schema unchanged)
+        // pousser l'événement vers la file Redis avec chaîne de couleur (garde le schéma DB inchangé)
         const now = Date.now();
         await pushToQueue({
           x: place.x,
@@ -782,7 +921,7 @@ class PaletteManager {
 
         totalPixels += 1;
 
-        // broadcast immediately using color string (compat clients expect strings)
+        // diffuser immédiatement en utilisant la chaîne de couleur (les clients de compat attendent des chaînes)
         broadcast({
           type: "updatePixel",
           x: place.x,
@@ -799,14 +938,17 @@ class PaletteManager {
           `Mise à jour du pixel diffusée : x=${place.x}, y=${place.y}, couleur=${colorString}, total=${totalPixels}`,
         );
 
-        // optionally trigger consumer if queue big
+        // optionnellement déclencher le consommateur si la file est grande
         try {
           const qlen = await client.lLen(QUEUE_KEY);
           if (qlen >= BATCH_MAX) {
             void flushRedisQueue();
           }
         } catch (e) {
-          console.error("Error checking Redis queue length:", e);
+          console.error(
+            "Erreur lors de la vérification de la longueur de la file Redis:",
+            e,
+          );
         }
       }
     });

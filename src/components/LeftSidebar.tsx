@@ -182,9 +182,7 @@ export default function LeftSidebar({
                 </m.span>
                 <div className="hidden md:block">
                   <Tooltip>
-                    {showAdminPanel
-                      ? "Masquer panneau admin"
-                      : "Panneau admin"}
+                    {showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}
                   </Tooltip>
                 </div>
               </m.button>

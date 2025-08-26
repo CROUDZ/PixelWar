@@ -16,23 +16,33 @@ export default async function handler(
   }
 
   try {
-    console.log("Verifying 2FA for user ID:", id, "with token:", token);
+    console.log(
+      "Vérification de la 2FA pour l'utilisateur ID :",
+      id,
+      "avec le token :",
+      token,
+    );
 
     const verified = await verifyTwoFAToken(id, token);
 
-    console.log("2FA verification result:", verified, "for user ID:", id);
+    console.log(
+      "Résultat de la vérification 2FA :",
+      verified,
+      "pour l'utilisateur ID :",
+      id,
+    );
 
     if (verified) {
       // Activer la 2FA et marquer comme vérifié
       await enableTwoFA(id);
 
-      console.log("2FA successfully activated for user ID:", id);
+      console.log("2FA activée avec succès pour l'utilisateur ID :", id);
       res.status(200).json({ success: true });
     } else {
       res.status(200).json({ success: false });
     }
   } catch (error) {
-    console.error("Error verifying 2FA:", error);
+    console.error("Erreur lors de la vérification de la 2FA :", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }

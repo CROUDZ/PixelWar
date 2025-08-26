@@ -1,7 +1,10 @@
 import { Events, Client, GuildMember } from "discord.js";
 
 const ENV = process.env.NODE_ENV || "development";
-const API_URL = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+const API_URL =
+  ENV === "production"
+    ? "https://pixelwar-hubdurp.fr"
+    : "http://localhost:3000";
 
 const guildMemberRemoveEvent = {
   name: Events.GuildMemberRemove,
@@ -14,11 +17,13 @@ const guildMemberRemoveEvent = {
 
     if (!oldMember.premiumSince && newMember.premiumSince) {
       boosted = true;
-      console.log(`User boosted the server: ${newMember.user.tag}`);
+      console.log(`Utilisateur a boosté le serveur : ${newMember.user.tag}`);
     }
     if (newMember.premiumSince && !oldMember.premiumSince) {
       boosted = false;
-      console.log(`User removed boost from the server: ${newMember.user.tag}`);
+      console.log(
+        `Utilisateur a retiré son boost du serveur : ${newMember.user.tag}`,
+      );
     }
 
     try {
@@ -28,7 +33,10 @@ const guildMemberRemoveEvent = {
         body: JSON.stringify({ userId: newMember.id, boosted: boosted }),
       });
     } catch (error) {
-      console.error("Failed to notify API about guild member removal:", error);
+      console.error(
+        "Échec de la notification à l'API concernant le retrait du membre du serveur :",
+        error,
+      );
     }
   },
 };

@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  subscribeConnectionState, 
-  subscribeWS, 
-  sendWS, 
-  isWSConnected, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  subscribeConnectionState,
+  subscribeWS,
+  sendWS,
+  isWSConnected,
   forceReconnect,
-  type ConnectionState 
-} from '@/lib/ws';
+  type ConnectionState,
+} from "@/lib/ws";
 
 interface UseWebSocketOptions {
   onMessage?: (data: Record<string, unknown>) => void;
@@ -25,12 +25,14 @@ interface UseWebSocketReturn {
   errorCount: number;
 }
 
-export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+export function useWebSocket(
+  options: UseWebSocketOptions = {},
+): UseWebSocketReturn {
   const {
     onMessage,
     onConnectionChange,
     autoReconnect = true,
-    maxReconnectAttempts = 10
+    maxReconnectAttempts = 10,
   } = options;
 
   const [connectionState, setConnectionState] = useState<ConnectionState>({
@@ -40,7 +42,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     reconnectAttempts: 0,
   });
 
-  const [lastMessage, setLastMessage] = useState<Record<string, unknown> | null>(null);
+  const [lastMessage, setLastMessage] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [messageCount, setMessageCount] = useState(0);
   const [errorCount, setErrorCount] = useState(0);
 
@@ -49,14 +54,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     const unsubscribeConnectionState = subscribeConnectionState((state) => {
       setConnectionState(state);
       onConnectionChange?.(state);
-      
+
       // Auto-reconnect logic
       if (autoReconnect && !state.isConnected && !state.isConnecting) {
         if (state.reconnectAttempts < maxReconnectAttempts) {
-          console.log(`[useWebSocket] Auto-reconnect attempt ${state.reconnectAttempts}/${maxReconnectAttempts}`);
+          console.log(
+            `[useWebSocket] (FR) Tentative de reconnexion automatique ${state.reconnectAttempts}/${maxReconnectAttempts}`,
+          );
         } else {
-          console.warn(`[useWebSocket] Max reconnect attempts (${maxReconnectAttempts}) reached`);
-          setErrorCount(prev => prev + 1);
+          console.warn(
+            `[useWebSocket] (FR) Nombre maximum de tentatives de reconnexion (${maxReconnectAttempts}) atteint`,
+          );
+          setErrorCount((prev) => prev + 1);
         }
       }
     });
@@ -68,7 +77,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   useEffect(() => {
     const unsubscribeMessages = subscribeWS((data) => {
       setLastMessage(data);
-      setMessageCount(prev => prev + 1);
+      setMessageCount((prev) => prev + 1);
       onMessage?.(data);
     });
 
@@ -79,14 +88,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     try {
       return sendWS(data);
     } catch (error) {
-      console.error('[useWebSocket] Send error:', error);
-      setErrorCount(prev => prev + 1);
+      console.error("[useWebSocket] (FR) Erreur d'envoi :", error);
+      setErrorCount((prev) => prev + 1);
       return false;
     }
   }, []);
 
   const reconnect = useCallback(() => {
-    console.log('[useWebSocket] Manual reconnect requested');
+    console.log("[useWebSocket] (FR) Reconnexion manuelle demandée");
     forceReconnect();
   }, []);
 
@@ -113,25 +122,25 @@ export function usePixelWebSocket(userId: string | null) {
     isConnected,
     reconnect,
     messageCount,
-    errorCount
+    errorCount,
   } = useWebSocket({
     onMessage: (data) => {
-      if (data.type === 'init') {
+      if (data.type === "init") {
         const width = Number(data.width) || 100;
         const height = Number(data.height) || 100;
         setGridDimensions({ width, height });
         setIsGridLoaded(true);
         setLastSyncTimestamp(Date.now());
-        
+
         // Send auth after init
         if (userId) {
           send({
-            type: 'auth',
+            type: "auth",
             userId,
-            clientToken: `${Date.now()}-${Math.random()}`
+            clientToken: `${Date.now()}-${Math.random()}`,
           });
         }
-      } else if (data.type === 'updatePixel' && data.timestamp) {
+      } else if (data.type === "updatePixel" && data.timestamp) {
         setLastSyncTimestamp(Number(data.timestamp));
       }
     },
@@ -139,25 +148,28 @@ export function usePixelWebSocket(userId: string | null) {
       if (!state.isConnected) {
         setIsGridLoaded(false);
       }
-    }
+    },
   });
 
   const requestResync = useCallback(() => {
     if (userId) {
-      send({ type: 'requestInit', userId });
+      send({ type: "requestInit", userId });
     }
   }, [send, userId]);
 
-  const sendPixel = useCallback((x: number, y: number, color: string, isAdmin = false) => {
-    return send({ 
-      type: 'placePixel', 
-      x, 
-      y, 
-      color, 
-      userId, 
-      isAdmin 
-    });
-  }, [send, userId]);
+  const sendPixel = useCallback(
+    (x: number, y: number, color: string, isAdmin = false) => {
+      return send({
+        type: "placePixel",
+        x,
+        y,
+        color,
+        userId,
+        isAdmin,
+      });
+    },
+    [send, userId],
+  );
 
   return {
     connectionState,
@@ -170,6 +182,6 @@ export function usePixelWebSocket(userId: string | null) {
     reconnect,
     requestResync,
     sendPixel,
-    send
+    send,
   };
 }

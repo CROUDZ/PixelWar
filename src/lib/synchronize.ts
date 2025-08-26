@@ -32,7 +32,10 @@ export async function synchronize(data: {
   discordId: string;
   prismaUserId?: string; // nouvel argument optionnel : l'id prisma du user à mettre à jour
 }) {
-  console.log("[Synchronize] Starting synchronization for", data.discordId);
+  console.log(
+    "[Synchronize] (FR) Début de la synchronisation pour",
+    data.discordId,
+  );
   const { refreshToken, accessToken: initialAccessToken, discordId } = data;
   let accessToken = initialAccessToken;
   let newRefreshToken = refreshToken;
@@ -87,7 +90,10 @@ export async function synchronize(data: {
   const guilds = await guildsResponse.json();
   const isInGuild = guilds.some((g: Guild) => g.id === guildId);
 
-  console.log("[Synchronize] User is in guild:", isInGuild);
+  console.log(
+    "[Synchronize] (FR) L'utilisateur est dans la guilde :",
+    isInGuild,
+  );
 
   const guildMemberResponse = await fetch(
     `https://discord.com/api/guilds/${guildId}/members/${discordId}`,

@@ -83,11 +83,14 @@ export default async function handler(
         avatar: action.avatar || null,
       }));
 
-      console.log(transformedData);
+      console.log("[pixelAction] (FR) Données transformées :", transformedData);
 
       res.status(200).json(transformedData);
     } catch (error) {
-      console.error("Error fetching pixel actions:", error);
+      console.error(
+        "Erreur lors de la récupération des actions pixel :",
+        error,
+      );
       res.status(500).json({ error: "Internal Server Error" });
     }
   } else {

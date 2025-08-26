@@ -32,7 +32,10 @@ import {
 } from "lucide-react";
 
 const ENV = process.env.NODE_ENV || "development";
-const DOMAIN = ENV === "production" ? "https://pixelwar-hubdurp.fr" : "http://localhost:3000";
+const DOMAIN =
+  ENV === "production"
+    ? "https://pixelwar-hubdurp.fr"
+    : "http://localhost:3000";
 
 interface NavItem {
   name: string;
@@ -72,7 +75,7 @@ const Header: React.FC = () => {
     },
     {
       name: "Discord",
-      href: "https://discord.gg/your-discord-link",
+      href: "https://discord.gg/AcECGMRTkq",
       target: "_blank",
       admin: false,
       icon: <MessageCircle size={18} />,
@@ -464,9 +467,7 @@ const Header: React.FC = () => {
                             ) : (
                               <button
                                 onClick={() =>
-                                  openInPopup(
-                                    `${DOMAIN}/auth/discord-redirect`,
-                                  )
+                                  openInPopup(`${DOMAIN}/auth/discord-redirect`)
                                 }
                                 className="w-full flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
                               >
@@ -706,9 +707,7 @@ const Header: React.FC = () => {
                 <m.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() =>
-                    openInPopup(`${DOMAIN}/auth/discord-redirect`)
-                  }
+                  onClick={() => openInPopup(`${DOMAIN}/auth/discord-redirect`)}
                   className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-md transition"
                 >
                   Connexion

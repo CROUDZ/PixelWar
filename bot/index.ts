@@ -59,8 +59,6 @@ app.listen(3001, "127.0.0.1", () => {
   console.log(`Server is running on port 3001`);
 });
 
-console.log("DISCORD_CLIENT_TOKEN:", process.env.DISCORD_CLIENT_TOKEN);
-
 if (!process.env.DISCORD_CLIENT_TOKEN) {
   console.error(
     "Error: DISCORD_CLIENT_TOKEN is not set in environment variables.",

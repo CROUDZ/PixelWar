@@ -3,7 +3,7 @@ import { m, AnimatePresence } from "framer-motion";
 
 const nesPalette = [
   "#000000",
-  "#FFFFFF",
+  "#FFFFFE",
   "#7C7C7C",
   "#FCFC00",
   "#A80020",
@@ -21,7 +21,7 @@ const nesPalette = [
 ];
 
 const blackCursor = [
-  "#FFFFFF",
+  "#FFFFFE",
   "#7C7C7C",
   "#BCBCBC",
   "#FCFC00",
@@ -89,7 +89,7 @@ export default function PixelSelector({
   const handleSelect = (color: string) => {
     // Only update and notify if the color actually changed
     if (color !== selected) {
-      console.log("[PixelSelector] Color selected:", color);
+      console.log("[PixelSelector] (FR) Couleur sélectionnée :", color);
       setSelected(color);
       onSelect(color); // Toujours notifier la sélection, indépendamment du mode valide
     }

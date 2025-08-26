@@ -40,7 +40,7 @@ const interactionCreateEvent = {
     }
     // Gestion des boutons
     else if (interaction.isButton()) {
-      console.log(interaction.customId);
+      console.log(`ID du bouton cliqué : ${interaction.customId}`);
       const button = interaction.client.buttons.get(interaction.customId);
       if (!button) {
         console.error(`No button matching ${interaction.customId} was found.`);

@@ -17,7 +17,7 @@ export default async function handler(
   }
 
   console.log(
-    `[guildMemberBoostUpdate] Updating boost status for user: ${userId}, boosted: ${boosted}`,
+    `[guildMemberBoostUpdate] (FR) Mise à jour du statut boost pour l'utilisateur : ${userId}, boosté : ${boosted}`,
   );
 
   try {
@@ -26,11 +26,11 @@ export default async function handler(
       data: { boosted },
     });
     console.log(
-      `[guildMemberBoostUpdate] Updated boost status for user: ${userId}, boosted: ${boosted}`,
+      `[guildMemberBoostUpdate] (FR) Statut boost mis à jour pour l'utilisateur : ${userId}, boosté : ${boosted}`,
     );
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("[guildMemberBoostUpdate] error:", error);
+    console.error("[guildMemberBoostUpdate] (FR) erreur :", error);
     return res
       .status(500)
       .json({ error: "Failed to update user boost status" });

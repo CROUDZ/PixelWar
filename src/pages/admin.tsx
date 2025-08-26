@@ -5,7 +5,6 @@ import { GetServerSideProps } from "next";
 import dynamic from "next/dynamic";
 import { useEventMode } from "@/context/EventMode"; // Import EventMode context
 
-
 const Header = dynamic(() => import("../components/Header"), {
   ssr: false,
 });
@@ -32,7 +31,9 @@ const ClearCanvasButton: React.FC = () => {
 
   const handleClearCanvas = async () => {
     if (confirmationText !== "SUPPRIMER TOUT") {
-      setClearMessage("Veuillez taper exactement 'SUPPRIMER TOUT' pour confirmer");
+      setClearMessage(
+        "Veuillez taper exactement 'SUPPRIMER TOUT' pour confirmer",
+      );
       return;
     }
 
@@ -53,7 +54,9 @@ const ClearCanvasButton: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setClearMessage(`✅ Toile nettoyée avec succès ! Opération effectuée par ${data.clearedBy} à ${new Date(data.timestamp).toLocaleString()}`);
+        setClearMessage(
+          `✅ Toile nettoyée avec succès ! Opération effectuée par ${data.clearedBy} à ${new Date(data.timestamp).toLocaleString()}`,
+        );
         setShowConfirmation(false);
         setConfirmationText("");
       } else {
@@ -80,8 +83,9 @@ const ClearCanvasButton: React.FC = () => {
             🚨 CONFIRMATION FINALE REQUISE
           </h3>
           <p className="text-red-700 dark:text-red-300 mb-4">
-            Pour confirmer que vous voulez vraiment supprimer TOUTE la toile et son historique, 
-            tapez exactement <strong>"SUPPRIMER TOUT"</strong> (sans les guillemets) dans le champ ci-dessous :
+            Pour confirmer que vous voulez vraiment supprimer TOUTE la toile et
+            son historique, tapez exactement <strong>"SUPPRIMER TOUT"</strong>{" "}
+            (sans les guillemets) dans le champ ci-dessous :
           </p>
           <input
             type="text"
@@ -98,7 +102,9 @@ const ClearCanvasButton: React.FC = () => {
             disabled={isClearing || confirmationText !== "SUPPRIMER TOUT"}
             className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors"
           >
-            {isClearing ? "🔄 Nettoyage en cours..." : "🗑️ CONFIRMER LA SUPPRESSION"}
+            {isClearing
+              ? "🔄 Nettoyage en cours..."
+              : "🗑️ CONFIRMER LA SUPPRESSION"}
           </button>
           <button
             onClick={cancelClear}
@@ -110,11 +116,13 @@ const ClearCanvasButton: React.FC = () => {
         </div>
 
         {clearMessage && (
-          <div className={`p-4 rounded-xl border ${
-            clearMessage.includes("✅") 
-              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-              : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-          }`}>
+          <div
+            className={`p-4 rounded-xl border ${
+              clearMessage.includes("✅")
+                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+            }`}
+          >
             {clearMessage}
           </div>
         )}
@@ -132,11 +140,13 @@ const ClearCanvasButton: React.FC = () => {
       </button>
 
       {clearMessage && (
-        <div className={`p-4 rounded-xl border ${
-          clearMessage.includes("✅") 
-            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-        }`}>
+        <div
+          className={`p-4 rounded-xl border ${
+            clearMessage.includes("✅")
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+              : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+          }`}
+        >
           {clearMessage}
         </div>
       )}
@@ -158,7 +168,7 @@ const AdminPage: React.FC = () => {
   const [newStartTime, setNewStartTime] = useState<string>("");
   const [newEndTime, setNewEndTime] = useState<string>("");
 
-  const handleAddAdmin = async (e: React.FormEvent) => {
+  const handleAdmin = async (e: React.FormEvent, newRole: "ADMIN" | "USER") => {
     e.preventDefault();
     if (!admin.trim()) return;
 
@@ -167,7 +177,7 @@ const AdminPage: React.FC = () => {
       const res = await fetch("/api/prisma/adminUpdate", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: admin.trim(), newRole: "ADMIN" }),
+        body: JSON.stringify({ email: admin.trim(), newRole }),
       });
 
       const data = await res.json();
@@ -259,7 +269,7 @@ const AdminPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
         <Header />
-        <A2F/>
+        <A2F />
       </div>
     );
   }
@@ -445,7 +455,7 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          <form onSubmit={handleAddAdmin} className="space-y-4">
+          <form onSubmit={(e) => handleAdmin(e, "ADMIN")} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Adresse email du nouvel administrateur
@@ -472,6 +482,37 @@ const AdminPage: React.FC = () => {
                 </div>
               ) : (
                 "Ajouter Administrateur"
+              )}
+            </button>
+          </form>
+
+          <form onSubmit={(e) => handleAdmin(e, "USER")} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Adresse email de l'administrateur à retirer du rôle d'admin
+              </label>
+              <input
+                type="email"
+                value={admin}
+                onChange={(e) => setAdmin(e.target.value)}
+                placeholder="admin@example.com"
+                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !admin.trim()}
+              className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  Ajout en cours...
+                </div>
+              ) : (
+                "Retirer Administrateur"
               )}
             </button>
           </form>

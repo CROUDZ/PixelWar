@@ -30,9 +30,11 @@ export default function PixelInformations() {
     }, 1000);
 
     const unsubscribe = subscribeWS((data: unknown) => {
+      console.log("[PixelCount] (FR) Données WS reçues :", data);
       if (typeof data !== "object" || data === null) return;
 
       const wsData = data as { type?: string; totalPixels?: number };
+      console.log("[PixelCount] (FR) Données WS reçues :", wsData);
 
       if (
         wsData.type === "pixelCount" &&
@@ -49,9 +51,11 @@ export default function PixelInformations() {
         timestampsRef.current.push(Date.now());
       } else if (wsData.type === "canvasClear") {
         setCount(0);
-        timestampsRef.current = []; // Reset rate calculation
+        timestampsRef.current = []; // Réinitialise le calcul du taux
         setRate(0);
-        console.log("[PixelCount] Canvas cleared, reset pixel count");
+        console.log(
+          "[PixelCount] (FR) Canvas effacé, compteur de pixels réinitialisé",
+        );
       }
     });
 
