@@ -245,6 +245,7 @@ const AdminPage: React.FC = () => {
       });
 
       const data = await res.json();
+      console.log(data);
       if (data.success) {
         setMessage("Administrateur ajouté avec succès !");
         setAdmin("");
