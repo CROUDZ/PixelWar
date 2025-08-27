@@ -114,10 +114,18 @@ export default function LeftSidebar({
           {buttons.map((b, i) => {
             const Icon = b.icon;
             const colorClasses = {
-              blue: b.active ? "bg-blue-500 text-white" : "bg-surface-hover text-text-primary hover:bg-surface-primary",
-              green: b.active ? "bg-green-500 text-white" : "bg-surface-hover text-text-primary hover:bg-surface-primary",
-              purple: b.active ? "bg-purple-500 text-white" : "bg-surface-hover text-text-primary hover:bg-surface-primary",
-              orange: b.active ? "bg-orange-500 text-white" : "bg-surface-hover text-text-primary hover:bg-surface-primary",
+              blue: b.active
+                ? "bg-blue-500 text-white"
+                : "bg-surface-hover text-text-primary hover:bg-surface-primary",
+              green: b.active
+                ? "bg-green-500 text-white"
+                : "bg-surface-hover text-text-primary hover:bg-surface-primary",
+              purple: b.active
+                ? "bg-purple-500 text-white"
+                : "bg-surface-hover text-text-primary hover:bg-surface-primary",
+              orange: b.active
+                ? "bg-orange-500 text-white"
+                : "bg-surface-hover text-text-primary hover:bg-surface-primary",
             };
 
             return (
@@ -169,18 +177,27 @@ export default function LeftSidebar({
                 <m.button
                   className={`group relative flex items-center justify-center md:w-12 md:h-12 w-10 h-10 rounded-lg
                     focus:outline-none outline-none 
-                    ${showAdminPanel
-                      ? "bg-red-500 text-white shadow-md"
-                      : "bg-surface-hover text-text-primary hover:bg-surface-primary"
+                    ${
+                      showAdminPanel
+                        ? "bg-red-500 text-white shadow-md"
+                        : "bg-surface-hover text-text-primary hover:bg-surface-primary"
                     }
                     transition-all duration-200`}
                   onClick={onToggleAdminPanel}
                   aria-pressed={showAdminPanel}
-                  title={showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}
-                  aria-label={showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}
+                  title={
+                    showAdminPanel ? "Masquer panneau admin" : "Panneau admin"
+                  }
+                  aria-label={
+                    showAdminPanel ? "Masquer panneau admin" : "Panneau admin"
+                  }
                 >
                   <m.span
-                    animate={showAdminPanel ? { scale: 1.05, rotate: -8 } : { scale: 1 }}
+                    animate={
+                      showAdminPanel
+                        ? { scale: 1.05, rotate: -8 }
+                        : { scale: 1 }
+                    }
                   >
                     {showAdminPanel ? (
                       <X className="w-4 h-4" />
@@ -189,7 +206,11 @@ export default function LeftSidebar({
                     )}
                   </m.span>
                   <div className="hidden md:block">
-                    <Tooltip>{showAdminPanel ? "Masquer panneau admin" : "Panneau admin"}</Tooltip>
+                    <Tooltip>
+                      {showAdminPanel
+                        ? "Masquer panneau admin"
+                        : "Panneau admin"}
+                    </Tooltip>
                   </div>
                 </m.button>
               ) : (

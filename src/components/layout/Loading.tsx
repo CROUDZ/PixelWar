@@ -59,9 +59,7 @@ const Loading: React.FC<LoadingProps> = ({
             className={`${sizeClasses.sm} border-2 border-transparent border-t-accent rounded-full animate-spin absolute top-0 left-0`}
           ></div>
         </div>
-        <span className="text-sm text-text-secondary">
-          {message}
-        </span>
+        <span className="text-sm text-text-secondary">{message}</span>
       </div>
     );
   }
@@ -135,7 +133,7 @@ const Loading: React.FC<LoadingProps> = ({
                 duration: 2,
                 ease: "easeInOut",
                 repeat: Infinity,
-                repeatType: "reverse"
+                repeatType: "reverse",
               }}
             />
           </div>

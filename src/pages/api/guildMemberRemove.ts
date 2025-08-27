@@ -17,6 +17,15 @@ export default async function handler(
   if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      console.error(
+        "[guildMemberRemove] (FR) utilisateur non trouvé :",
+        userId,
+      );
+      return res.status(404).json({ error: "User not found" });
+    }
+
     console.log(
       "[guildMemberRemove] (FR) Suppression des sessions pour",
       userId,

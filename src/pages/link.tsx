@@ -2,7 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { m } from "framer-motion";
-import { MessageCircle, CheckCircle, ExternalLink, Hash, Link as LinkIcon } from "lucide-react";
+import {
+  MessageCircle,
+  CheckCircle,
+  ExternalLink,
+  Hash,
+  Link as LinkIcon,
+} from "lucide-react";
 import { subscribeWS, sendWS } from "@/lib/ws";
 
 function makeToken() {
@@ -124,7 +130,12 @@ export default function LinkPage() {
             <m.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, type: "spring", stiffness: 200 }}
+              transition={{
+                duration: 0.5,
+                delay: 0.2,
+                type: "spring",
+                stiffness: 200,
+              }}
               className="flex items-center justify-center gap-3 mb-4"
             >
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
@@ -152,7 +163,12 @@ export default function LinkPage() {
               <m.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.3, type: "spring", stiffness: 200 }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.3,
+                  type: "spring",
+                  stiffness: 200,
+                }}
                 className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto"
               >
                 <CheckCircle className="w-8 h-8 text-white" />

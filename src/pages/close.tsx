@@ -51,7 +51,12 @@ const ClosePage: React.FC = () => {
           <m.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2, type: "spring", stiffness: 200 }}
+            transition={{
+              duration: 0.5,
+              delay: 0.2,
+              type: "spring",
+              stiffness: 200,
+            }}
             className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6"
           >
             <CheckCircle className="w-10 h-10 text-white" />
@@ -76,7 +81,9 @@ const ClosePage: React.FC = () => {
           >
             Votre compte a été lié avec succès.
             <br />
-            <span className="font-medium text-gray-900 dark:text-white">Bienvenue dans PixelWar !</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              Bienvenue dans PixelWar !
+            </span>
           </m.p>
 
           {/* Countdown avec animation */}
@@ -99,7 +106,8 @@ const ClosePage: React.FC = () => {
               <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping"></div>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Fermeture automatique dans {countdown} seconde{countdown !== 1 ? "s" : ""}
+              Fermeture automatique dans {countdown} seconde
+              {countdown !== 1 ? "s" : ""}
             </p>
           </m.div>
 
@@ -128,7 +136,8 @@ const ClosePage: React.FC = () => {
           transition={{ duration: 0.4, delay: 1.2 }}
           className="mt-6 text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto"
         >
-          Cette fenêtre se fermera automatiquement. Vous pouvez également la fermer manuellement.
+          Cette fenêtre se fermera automatiquement. Vous pouvez également la
+          fermer manuellement.
         </m.p>
       </m.div>
     </div>

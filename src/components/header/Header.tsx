@@ -25,8 +25,10 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
-const DeleteAccount = dynamic(() => import('@/components/header/DeleteAccount'));
-const UserMenu = dynamic(() => import('@/components/header/userMenu'));
+const DeleteAccount = dynamic(
+  () => import("@/components/header/DeleteAccount"),
+);
+const UserMenu = dynamic(() => import("@/components/header/userMenu"));
 
 const ENV = process.env.NODE_ENV || "development";
 const DOMAIN =
@@ -241,7 +243,12 @@ const Header: React.FC = () => {
             <m.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15, type: "spring", stiffness: 300, damping: 25 }}
+              transition={{
+                delay: 0.15,
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+              }}
               className={`hidden md:flex items-center space-x-3 px-4 py-2.5 rounded-xl border backdrop-blur-sm ${statusConfig.bg} ${statusConfig.border} shadow-lg`}
               aria-hidden={false}
             >
@@ -260,7 +267,9 @@ const Header: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className={`w-2.5 h-2.5 rounded-full ${statusConfig.dot} ${statusConfig.pulse ? "animate-ping" : ""}`} />
+              <div
+                className={`w-2.5 h-2.5 rounded-full ${statusConfig.dot} ${statusConfig.pulse ? "animate-ping" : ""}`}
+              />
             </m.div>
 
             {/* Navigation (desktop) */}
@@ -270,7 +279,12 @@ const Header: React.FC = () => {
                   key={item.name}
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 + index * 0.1, type: "spring", stiffness: 300, damping: 25 }}
+                  transition={{
+                    delay: 0.1 + index * 0.1,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                  }}
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -279,7 +293,9 @@ const Header: React.FC = () => {
                     target={item.target}
                     className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-200"
                   >
-                    <span className="text-cyan-600 group-hover:scale-110 transition-transform duration-200">{item.icon}</span>
+                    <span className="text-cyan-600 group-hover:scale-110 transition-transform duration-200">
+                      {item.icon}
+                    </span>
                     <span className="font-medium">{item.name}</span>
                   </Link>
                 </m.div>
@@ -412,7 +428,10 @@ const Header: React.FC = () => {
                       exit={{ rotate: -90, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Menu size={20} className="text-gray-900 dark:text-white" />
+                      <Menu
+                        size={20}
+                        className="text-gray-900 dark:text-white"
+                      />
                     </m.div>
                   )}
                 </AnimatePresence>
@@ -450,7 +469,12 @@ const Header: React.FC = () => {
                     key={item.name}
                     initial={{ x: 24, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.05, type: "spring", stiffness: 300, damping: 25 }}
+                    transition={{
+                      delay: index * 0.05,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 25,
+                    }}
                   >
                     <Link
                       href={item.href}
@@ -458,7 +482,9 @@ const Header: React.FC = () => {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 group"
                     >
-                      <span className="text-cyan-600 group-hover:scale-110 transition-transform duration-200">{item.icon}</span>
+                      <span className="text-cyan-600 group-hover:scale-110 transition-transform duration-200">
+                        {item.icon}
+                      </span>
                       <span className="font-medium">{item.name}</span>
                     </Link>
                   </m.div>
@@ -468,7 +494,7 @@ const Header: React.FC = () => {
           </>
         )}
       </AnimatePresence>
-      
+
       {/* Delete Account Confirmation */}
       {showDeleteConfirm && (
         <DeleteAccount

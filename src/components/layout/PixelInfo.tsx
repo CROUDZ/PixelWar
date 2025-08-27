@@ -18,7 +18,7 @@ import {
   Activity,
   Download,
   Search,
-  Flame
+  Flame,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -199,12 +199,8 @@ const PixelInfo: React.FC = () => {
           role="tooltip"
           aria-live="polite"
         >
-          <div className="font-semibold text-sm">
-            {point.count} pixels
-          </div>
-          <div className="text-text-secondary text-xs">
-            {point.label}
-          </div>
+          <div className="font-semibold text-sm">{point.count} pixels</div>
+          <div className="text-text-secondary text-xs">{point.label}</div>
         </div>
       );
     };
@@ -215,9 +211,7 @@ const PixelInfo: React.FC = () => {
           <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-text-primary">
             Activité Temporelle
           </h3>
-          <div className="text-xs text-text-secondary">
-            Max: {maxCount} px
-          </div>
+          <div className="text-xs text-text-secondary">Max: {maxCount} px</div>
         </div>
 
         <div className="w-full h-[180px] sm:h-[240px] lg:h-[280px]">
@@ -234,8 +228,16 @@ const PixelInfo: React.FC = () => {
             >
               <defs>
                 <linearGradient id="gradCount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.15} />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--accent)"
+                    stopOpacity={0.9}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--accent)"
+                    stopOpacity={0.15}
+                  />
                 </linearGradient>
               </defs>
 
@@ -287,15 +289,19 @@ const PixelInfo: React.FC = () => {
         </div>
 
         <div className="text-xs text-text-secondary">
-          Affichage optimisé pour mobile — faites défiler les labels si nécessaire.
+          Affichage optimisé pour mobile — faites défiler les labels si
+          nécessaire.
         </div>
 
         <div aria-live="polite" className="sr-only">
-          Activité mise à jour — {data.reduce((s, p) => s + p.count, 0)} pixels sur la période sélectionnée.
+          Activité mise à jour — {data.reduce((s, p) => s + p.count, 0)} pixels
+          sur la période sélectionnée.
         </div>
 
         <div id="chart-description" className="sr-only">
-          Graphique en aires montrant l'activité des pixels au fil du temps. L'axe X représente le temps et l'axe Y le nombre de pixels placés. La ligne de référence indique le maximum atteint.
+          Graphique en aires montrant l'activité des pixels au fil du temps.
+          L'axe X représente le temps et l'axe Y le nombre de pixels placés. La
+          ligne de référence indique le maximum atteint.
         </div>
       </div>
     );
@@ -741,9 +747,7 @@ const PixelInfo: React.FC = () => {
                       <div className="font-bold text-sm sm:text-base text-white">
                         {user.pixelCount}
                       </div>
-                      <div className="text-xs text-gray-200">
-                        pixels
-                      </div>
+                      <div className="text-xs text-gray-200">pixels</div>
                     </div>
                   </div>
                 ))
@@ -836,10 +840,14 @@ const PixelInfo: React.FC = () => {
 
                 <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 bg-surface-primary p-1 sm:p-2 text-xs border border-border-primary rounded">
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <span className="hidden sm:inline text-text-secondary">Faible</span>
+                    <span className="hidden sm:inline text-text-secondary">
+                      Faible
+                    </span>
                     <span className="sm:hidden text-text-secondary">F</span>
                     <div className="w-8 sm:w-12 h-2 sm:h-3 bg-gradient-to-r from-accent-200 to-accent-600 rounded"></div>
-                    <span className="hidden sm:inline text-text-secondary">Intense</span>
+                    <span className="hidden sm:inline text-text-secondary">
+                      Intense
+                    </span>
                     <span className="sm:hidden text-text-secondary">I</span>
                   </div>
                 </div>

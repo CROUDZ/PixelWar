@@ -21,6 +21,15 @@ export default async function handler(
   );
 
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      console.error(
+        "[guildMemberBoostUpdate] (FR) utilisateur non trouvé :",
+        userId,
+      );
+      return res.status(404).json({ error: "User not found" });
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { boosted },

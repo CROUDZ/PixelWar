@@ -1,3 +1,4 @@
+// components/pixel/OverlayImage.tsx  (remplacer entièrement par ceci)
 "use client";
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -20,9 +21,9 @@ interface OverlayImageProps {
   zIndex?: number;
   pointerEvents?: "none" | "auto";
   className?: string;
-  canvasZoom?: number;
-  canvasPan?: { x: number; y: number };
-  pixelSize?: number;
+  canvasZoom?: number; // CSS px per grid pixel
+  canvasPan?: { x: number; y: number }; // CSS px
+  pixelSize?: number; // logical pixel size multiplier (default 1)
 }
 
 export default function OverlayImage({
@@ -61,43 +62,53 @@ export default function OverlayImage({
   if (!show || !src || !rect) return null;
   if (typeof document === "undefined") return null;
 
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
 
-  // Calculs (on garde des floats pour éviter perte subpixel)
-  const canvasX = transform.x * pixelSize * canvasZoom + canvasPan.x;
-  const canvasY = transform.y * pixelSize * canvasZoom + canvasPan.y;
-  const scaledWidth = transform.width * pixelSize * canvasZoom;
-  const scaledHeight = transform.height * pixelSize * canvasZoom;
+  // === Calculs principaux ===
+  // pixelCssSize = nombre de CSS px pour 1 pixel de la grille
+  const pixelCssSize = (canvasZoom || 1) * (pixelSize || 1);
 
-  const snappedX = Math.round(canvasX * dpr) / dpr;
-  const snappedY = Math.round(canvasY * dpr) / dpr;
-  const snappedWidth = Math.round(scaledWidth * dpr) / dpr;
-  const snappedHeight = Math.round(scaledHeight * dpr) / dpr;
+  // position/size en CSS pixels (avant snapping)
+  const rawCanvasX = transform.x * pixelCssSize + (canvasPan?.x || 0);
+  const rawCanvasY = transform.y * pixelCssSize + (canvasPan?.y || 0);
+  const rawWidth = transform.width * pixelCssSize;
+  const rawHeight = transform.height * pixelCssSize;
 
-  // Portal target: on privilégie le conteneur du canvas pour avoir le même repère
+  // Snap en UNITÉS DE GRILLE (garantit alignement sur la grille)
+  const gridX = Math.round(rawCanvasX / pixelCssSize);
+  const gridY = Math.round(rawCanvasY / pixelCssSize);
+  const gridW = Math.max(1, Math.round(rawWidth / pixelCssSize));
+  const gridH = Math.max(1, Math.round(rawHeight / pixelCssSize));
+
+  // reconstruire valeurs CSS alignées sur la grille
+  const snappedCanvasX = gridX * pixelCssSize;
+  const snappedCanvasY = gridY * pixelCssSize;
+  const snappedWidth = gridW * pixelCssSize;
+  const snappedHeight = gridH * pixelCssSize;
+
+  // Snap final en device pixels (comme le canvas) pour éviter les gaps subpixel
+  const finalX = Math.round(snappedCanvasX * dpr) / dpr;
+  const finalY = Math.round(snappedCanvasY * dpr) / dpr;
+  const finalW = Math.round(snappedWidth * dpr) / dpr;
+  const finalH = Math.round(snappedHeight * dpr) / dpr;
+
+  // Debug (active si nécessaire)
+  // console.log("[OverlayImage] snap", { pixelCssSize, gridX, gridY, gridW, gridH, finalX, finalY, finalW, finalH, dpr });
+
+  // Portal: utiliser le conteneur du canvas (même repère) si disponible
   const portalTarget = targetRef?.current ?? document.body;
-
   const isBody = portalTarget === document.body;
 
-  // Classes Tailwind pour le wrapper avec amélioration visuelle
   const wrapperClasses = [
     "absolute",
     "pointer-events-none",
     "overflow-visible",
     `z-${zIndex}`,
-    // Amélioration visuelle pour le mode clair
-    "backdrop-blur-sm",
-    "bg-surface-primary/20",
-    "border",
-    "border-border-primary/30",
-    "rounded-lg",
-    "shadow-glass",
     className || "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  // Classes Tailwind pour l'élément intérieur avec effets visuels
   const innerClasses = [
     "absolute",
     "top-0",
@@ -105,40 +116,21 @@ export default function OverlayImage({
     "box-border",
     "backface-hidden",
     "will-change-transform",
-    "will-change-width",
-    "will-change-height",
-    "will-change-opacity",
-    // Amélioration de l'apparence
-    "bg-surface-primary/10",
-    "backdrop-blur-xs",
-    "border",
-    "border-border-primary/20",
-    "rounded-md",
-    "shadow-sm",
-    "transition-all",
-    "duration-200",
-    "ease-out",
-    pointerEvents === "auto"
-      ? "pointer-events-auto"
-      : "pointer-events-none",
+    pointerEvents === "auto" ? "pointer-events-auto" : "pointer-events-none",
   ].join(" ");
 
-  // Classes Tailwind pour l'image avec effets améliorés
   const imageClasses = [
     "w-full",
     "h-full",
-    "object-contain",
+    "object-cover",
     "select-none",
     "pointer-events-none",
     "block",
     "image-rendering-pixelated",
-    // Amélioration de l'image
-    "drop-shadow-sm",
-    "filter",
-    "brightness-105",
-    "contrast-110",
   ].join(" ");
 
+  // On place le wrapper à la position du container (rect.left/top) si portal sur body,
+  // sinon on laisse 0,0 et le transform inner fait le positionnement relatif.
   const node = (
     <div
       className={wrapperClasses}
@@ -152,10 +144,11 @@ export default function OverlayImage({
       <div
         className={innerClasses}
         style={{
-          transform: `translate3d(${snappedX}px, ${snappedY}px, 0) rotate(${transform.rotation}deg)`,
+          // translate relatif au container
+          transform: `translate3d(${finalX}px, ${finalY}px, 0) rotate(${transform.rotation}deg)`,
           transformOrigin: "top left",
-          width: `${snappedWidth}px`,
-          height: `${snappedHeight}px`,
+          width: `${finalW}px`,
+          height: `${finalH}px`,
         }}
       >
         <ImageFallback
@@ -165,6 +158,8 @@ export default function OverlayImage({
           className={imageClasses}
           style={{
             opacity: opacity,
+            width: "100%",
+            height: "100%",
           }}
           onError={() => {
             /* noop */

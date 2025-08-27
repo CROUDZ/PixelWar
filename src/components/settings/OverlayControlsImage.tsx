@@ -214,7 +214,9 @@ export default function OverlayControls({
 
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-text-primary">Opacité</span>
+                <span className="text-xs font-medium text-text-primary">
+                  Opacité
+                </span>
                 <span className="text-xs font-bold text-accent">
                   {Math.round(opacity * 100)}%
                 </span>
@@ -250,11 +252,15 @@ export default function OverlayControls({
         </div>
 
         <div className="bg-surface-secondary rounded-lg p-3 border border-border-secondary space-y-3">
-          <h4 className="text-sm font-bold text-text-primary">Transformation</h4>
+          <h4 className="text-sm font-bold text-text-primary">
+            Transformation
+          </h4>
 
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">Position X</label>
+              <label className="text-xs font-semibold text-text-primary">
+                Position X
+              </label>
               <input
                 type="number"
                 value={Math.round(transform.x)}
@@ -268,7 +274,9 @@ export default function OverlayControls({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">Position Y</label>
+              <label className="text-xs font-semibold text-text-primary">
+                Position Y
+              </label>
               <input
                 type="number"
                 value={Math.round(transform.y)}
@@ -283,7 +291,9 @@ export default function OverlayControls({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">Taille</label>
+              <label className="text-xs font-semibold text-text-primary">
+                Taille
+              </label>
               <input
                 type="number"
                 value={Math.round(transform.width)}
@@ -315,7 +325,10 @@ export default function OverlayControls({
                 value={transform.rotation}
                 onChange={(e) =>
                   onChangeTransform({
-                    rotation: sanitizeNumber(e.target.value, transform.rotation),
+                    rotation: sanitizeNumber(
+                      e.target.value,
+                      transform.rotation,
+                    ),
                   })
                 }
                 className="w-full accent-accent"

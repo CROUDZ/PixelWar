@@ -25,7 +25,7 @@ import {
   Database,
   Settings,
   Play,
-  Pause
+  Pause,
 } from "lucide-react";
 import { useEventMode } from "@/context/EventMode"; // Import EventMode context
 
@@ -359,13 +359,16 @@ const AdminPage: React.FC = () => {
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
                 <span>PixelWar</span>
                 <span>/</span>
-                <span className="text-blue-600 dark:text-blue-400 font-medium">Administration</span>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">
+                  Administration
+                </span>
               </div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent mb-2">
                 Centre d'Administration
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-lg">
-                Tableau de bord administrateur • Gestion et surveillance en temps réel
+                Tableau de bord administrateur • Gestion et surveillance en
+                temps réel
               </p>
             </div>
             <m.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -382,7 +385,6 @@ const AdminPage: React.FC = () => {
 
         {/* Statistiques améliorées */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           <m.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -469,7 +471,8 @@ const AdminPage: React.FC = () => {
                 </h3>
                 <p className="text-amber-700 dark:text-amber-400">
                   L'utilisateur doit se connecter au moins une fois pour que son
-                  compte soit créé dans la base de données avant de pouvoir lui attribuer des privilèges.
+                  compte soit créé dans la base de données avant de pouvoir lui
+                  attribuer des privilèges.
                 </p>
               </div>
             </div>
@@ -484,7 +487,10 @@ const AdminPage: React.FC = () => {
                   Promouvoir Administrateur
                 </h3>
               </div>
-              <form onSubmit={(e) => handleAdmin(e, "ADMIN")} className="space-y-4">
+              <form
+                onSubmit={(e) => handleAdmin(e, "ADMIN")}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Adresse email du nouvel administrateur
@@ -529,7 +535,10 @@ const AdminPage: React.FC = () => {
                   Rétrograder Administrateur
                 </h3>
               </div>
-              <form onSubmit={(e) => handleAdmin(e, "USER")} className="space-y-4">
+              <form
+                onSubmit={(e) => handleAdmin(e, "USER")}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Adresse email de l'administrateur à rétrograder
@@ -688,14 +697,16 @@ const AdminPage: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-2">
-                {banMessage.includes("banni") || banMessage.includes("débanni") ? (
+                {banMessage.includes("banni") ||
+                banMessage.includes("débanni") ? (
                   <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 ) : (
                   <XCircle className="w-4 h-4 flex-shrink-0" />
                 )}
                 <p
                   className={`text-sm ${
-                    banMessage.includes("banni") || banMessage.includes("débanni")
+                    banMessage.includes("banni") ||
+                    banMessage.includes("débanni")
                       ? "text-green-700 dark:text-green-300"
                       : "text-red-700 dark:text-red-300"
                   }`}
@@ -726,12 +737,16 @@ const AdminPage: React.FC = () => {
                 Planifier et contrôler les événements PixelWar
               </p>
             </div>
-            <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
-              isActive 
-                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" 
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500" : "bg-gray-400"}`}></div>
+            <div
+              className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
+                isActive
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500" : "bg-gray-400"}`}
+              ></div>
               {isActive ? "Actif" : "Inactif"}
             </div>
           </div>
@@ -743,7 +758,7 @@ const AdminPage: React.FC = () => {
                 <Clock className="w-5 h-5" />
                 Configuration Temporelle
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -777,7 +792,7 @@ const AdminPage: React.FC = () => {
                 <Settings className="w-5 h-5" />
                 Contrôles d'Événement
               </h3>
-              
+
               <m.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -804,36 +819,50 @@ const AdminPage: React.FC = () => {
 
               {/* Statut détaillé */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-6">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Statut Actuel</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                  Statut Actuel
+                </h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">État</span>
-                    <span className={`text-sm font-medium ${isActive ? "text-green-600" : "text-red-600"}`}>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      État
+                    </span>
+                    <span
+                      className={`text-sm font-medium ${isActive ? "text-green-600" : "text-red-600"}`}
+                    >
                       {isActive ? "En cours" : "Arrêté"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Début</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Début
+                    </span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {startTime ? new Date(startTime).toLocaleDateString('fr-FR', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : "Non défini"}
+                      {startTime
+                        ? new Date(startTime).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Non défini"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Fin</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Fin
+                    </span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {endTime ? new Date(endTime).toLocaleDateString('fr-FR', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : "Non défini"}
+                      {endTime
+                        ? new Date(endTime).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Non défini"}
                     </span>
                   </div>
                 </div>
@@ -904,7 +933,8 @@ const AdminPage: React.FC = () => {
               </p>
             </div>
             <div className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-              {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
+              {filteredUsers.length} utilisateur
+              {filteredUsers.length !== 1 ? "s" : ""}
             </div>
           </div>
 
@@ -987,28 +1017,43 @@ const AdminPage: React.FC = () => {
                           {user.id || "N/A"}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                          {user.email || <span className="text-gray-400 italic">Non renseigné</span>}
+                          {user.email || (
+                            <span className="text-gray-400 italic">
+                              Non renseigné
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                          {user.username || <span className="text-gray-400 italic">Non renseigné</span>}
+                          {user.username || (
+                            <span className="text-gray-400 italic">
+                              Non renseigné
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                          {user.global_name || <span className="text-gray-400 italic">Non renseigné</span>}
+                          {user.global_name || (
+                            <span className="text-gray-400 italic">
+                              Non renseigné
+                            </span>
+                          )}
                         </td>
                       </m.tr>
                     ))}
                   </tbody>
                 </table>
-                
+
                 {filteredUsers.length === 0 && !isLoading && (
                   <div className="py-12 text-center">
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400 text-lg">
-                      {searchQuery ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur chargé"}
+                      {searchQuery
+                        ? "Aucun utilisateur trouvé pour cette recherche"
+                        : "Aucun utilisateur chargé"}
                     </p>
                     {!searchQuery && (
                       <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                        Cliquez sur "Charger les Utilisateurs" pour afficher la liste
+                        Cliquez sur "Charger les Utilisateurs" pour afficher la
+                        liste
                       </p>
                     )}
                   </div>

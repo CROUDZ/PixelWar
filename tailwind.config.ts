@@ -118,7 +118,7 @@ const config: Config = {
         // Status colors for events
         green: {
           50: "#f0fdf4",
-          200: "#bbf7d0", 
+          200: "#bbf7d0",
           500: "#22c55e",
           800: "#166534",
           900: "#14532d",
@@ -126,7 +126,7 @@ const config: Config = {
         orange: {
           50: "#fff7ed",
           200: "#fed7aa",
-          500: "#f97316", 
+          500: "#f97316",
           800: "#9a3412",
           900: "#7c2d12",
         },
@@ -134,7 +134,7 @@ const config: Config = {
           50: "#fef2f2",
           200: "#fecaca",
           500: "#ef4444",
-          800: "#991b1b", 
+          800: "#991b1b",
           900: "#7f1d1d",
         },
         blue: {

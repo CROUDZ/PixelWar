@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-  Trash2,
-  AlertTriangle,
-  Lock,
-  AlertCircle,
-} from "lucide-react";
+import { Trash2, AlertTriangle, Lock, AlertCircle } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 interface DeleteAccountProps {
@@ -64,7 +59,10 @@ const DeleteAccount: React.FC<DeleteAccountProps> = ({
             <div className="flex items-center space-x-4 mb-6">
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <Trash2 size={24} className="text-red-600 dark:text-red-400" />
+                  <Trash2
+                    size={24}
+                    className="text-red-600 dark:text-red-400"
+                  />
                 </div>
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">!</span>
@@ -100,11 +98,15 @@ const DeleteAccount: React.FC<DeleteAccountProps> = ({
                   <ul className="text-sm text-red-700 dark:text-red-300 space-y-2">
                     <li className="flex items-center space-x-2">
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                      <span>Tous vos pixels seront supprimés définitivement</span>
+                      <span>
+                        Tous vos pixels seront supprimés définitivement
+                      </span>
                     </li>
                     <li className="flex items-center space-x-2">
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                      <span>Votre compte sera effacé de notre base de données</span>
+                      <span>
+                        Votre compte sera effacé de notre base de données
+                      </span>
                     </li>
                     <li className="flex items-center space-x-2">
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
@@ -147,7 +149,10 @@ const DeleteAccount: React.FC<DeleteAccountProps> = ({
               >
                 <div className="text-center">
                   <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Lock size={32} className="text-orange-600 dark:text-orange-400" />
+                    <Lock
+                      size={32}
+                      className="text-orange-600 dark:text-orange-400"
+                    />
                   </div>
                   <h4 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
                     Confirmation requise
@@ -203,8 +208,8 @@ const DeleteAccount: React.FC<DeleteAccountProps> = ({
 
                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4">
                   <p className="text-sm text-red-700 dark:text-red-300 text-center">
-                    Cette action supprimera définitivement toutes vos données et ne
-                    peut pas être annulée.
+                    Cette action supprimera définitivement toutes vos données et
+                    ne peut pas être annulée.
                   </p>
                 </div>
 

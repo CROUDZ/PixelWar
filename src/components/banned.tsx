@@ -16,7 +16,7 @@ const Banned: React.FC = () => {
           type: "spring",
           stiffness: 150,
           damping: 25,
-          duration: 1
+          duration: 1,
         }}
         className="w-full max-w-lg relative z-10"
       >
@@ -47,7 +47,7 @@ const Banned: React.FC = () => {
               type: "spring",
               stiffness: 400,
               damping: 20,
-              delay: 0.3
+              delay: 0.3,
             }}
             className="relative mb-8"
           >
@@ -59,7 +59,12 @@ const Banned: React.FC = () => {
             ></m.div>
             <m.div
               animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.5,
+              }}
               className="absolute inset-0 w-28 h-28 mx-auto border border-orange-500/30 rounded-full"
             ></m.div>
 
@@ -71,7 +76,7 @@ const Banned: React.FC = () => {
               transition={{
                 duration: 6,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               className="relative w-24 h-24 mx-auto bg-gradient-to-br from-red-500 via-red-600 to-red-700 rounded-2xl flex items-center justify-center shadow-2xl"
             >
@@ -148,8 +153,9 @@ const Banned: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-red-200/80 leading-relaxed">
-              Cette action a été prise pour protéger l'intégrité de notre communauté
-              et assurer une expérience positive pour tous les utilisateurs.
+              Cette action a été prise pour protéger l'intégrité de notre
+              communauté et assurer une expérience positive pour tous les
+              utilisateurs.
             </p>
           </m.div>
 
