@@ -1672,13 +1672,6 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           />
-          {/* WebSocket connection status indicator */}
-          <div
-            className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-              !connectionState.isConnected ? "bg-red-500" : "bg-green-500"
-            }`}
-            title={!connectionState.isConnected ? "Disconnected" : "Connected"}
-          />
           {(!isGridLoaded || !connectionState.isConnected) && (
             <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-2xl backdrop-blur-sm">
               <div className="flex flex-col items-center space-y-4">
