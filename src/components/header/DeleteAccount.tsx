@@ -1,20 +1,39 @@
 import React, { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Trash2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 interface DeleteAccountProps {
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
-  handleDeleteAccount: () => void;
 }
 
 const DeleteAccount: React.FC<DeleteAccountProps> = ({
   showDeleteConfirm,
   setShowDeleteConfirm,
-  handleDeleteAccount,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteStep, setDeleteStep] = useState(0);
+  console.log(showDeleteConfirm);
+
+  // Suppression compte
+  const handleDeleteAccount = async () => {
+    try {
+      const res = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE_ACCOUNT" }),
+      });
+      if (res.ok) {
+        await signOut({ callbackUrl: "/" });
+      } else {
+        const data = await res.json();
+        alert(data.error || "Erreur lors de la suppression");
+      }
+    } catch {
+      alert("Erreur de connexion");
+    }
+  };
 
   return (
     <AnimatePresence>

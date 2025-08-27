@@ -6,7 +6,7 @@ import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import type { PixelCanvasHandle } from "@/components/pixel/PixelCanvas"; // ajuste si nécessaire
-import Header from "@/components/layout/Header";
+import Header from "@/components/header/Header";
 import LeftSidebar from "@/components/layout/LeftSidebar";
 import Footer from "@/components/layout/Footer";
 import NotificationContainer from "@/components/NotificationContainer";
@@ -53,6 +53,8 @@ interface CanvasNavState {
   adminSelectionStart: { x: number; y: number } | null;
   zoom: number;
   pan: { x: number; y: number };
+  navigationDisabled: boolean;
+  onNavMove: (direction: "up" | "down" | "left" | "right") => void;
 }
 
 const HomePage: React.FC = () => {
@@ -69,6 +71,8 @@ const HomePage: React.FC = () => {
     adminSelectionStart: null,
     zoom: 1,
     pan: { x: 0, y: 0 },
+    navigationDisabled: false,
+    onNavMove: () => {}, // Fonction vide par défaut, sera remplacée par celle du canvas
   });
 
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
@@ -268,8 +272,6 @@ const HomePage: React.FC = () => {
                     <div className="w-full h-full flex items-center justify-center">
                       <PixelCanvas
                         ref={canvasApiRef}
-                        pixelWidth={100}
-                        pixelHeight={100}
                         onStateChange={setCanvasNavState}
                         showAdminPanelProp={showAdminPanel}
                         adminSelectedSizeProp={adminSelectedSize}
@@ -332,6 +334,8 @@ const HomePage: React.FC = () => {
                         adminSelectionStart={canvasNavState.adminSelectionStart}
                         isVisible={() => setShowNavInfo(!showNavInfo)}
                         onResetGrid={handleResetGrid}
+                        navigationDisabled={canvasNavState.navigationDisabled}
+                        onNavMove={canvasNavState.onNavMove}
                       />
                     </div>
                   )}

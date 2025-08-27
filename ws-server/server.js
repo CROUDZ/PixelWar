@@ -25,8 +25,9 @@ const FLUSH_INTERVAL_MS = Number(process.env.FLUSH_INTERVAL_MS || 100);
 const BATCH_MAX = Number(process.env.BATCH_MAX || 1000);
 const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
 
-const WIDTH = Number(process.env.GRID_WIDTH || 100);
-const HEIGHT = Number(process.env.GRID_HEIGHT || 100);
+const WIDTH = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
+const HEIGHT = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
+console.log(`Canvas dimensions: ${WIDTH}x${HEIGHT}`);
 
 // --- Clients Redis ---
 const redisUrl = process.env.REDIS_URL || undefined;
@@ -951,10 +952,6 @@ class PaletteManager {
           }
         }
         case "placeAdminBlock": {
-          console.log(
-            `[WS ${ws._id}] placeAdminBlock reçu -> pixels=${data.pixels.length}, userId=${data.userId}`,
-          );
-
           if (!data.isAdmin || !Array.isArray(data.pixels)) {
             console.warn(
               `[WS ${ws._id}] placeAdminBlock rejeté (non-admin ou données invalides).`,

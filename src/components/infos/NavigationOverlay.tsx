@@ -21,6 +21,8 @@ interface NavigationOverlayProps {
   className?: string;
   isVisible?: (visible: boolean) => void; // Callback pour la visibilité
   onResetGrid?: () => void; // Callback pour le reset de la grille
+  navigationDisabled?: boolean; // Ajout pour signaler navigation souris désactivée
+  onNavMove?: (dir: "up" | "down" | "left" | "right") => void; // Callback pour navigation clavier/boutons
 }
 
 /**
@@ -35,6 +37,8 @@ export default function NavigationOverlay({
   adminSelectionStart = null,
   className = "",
   onResetGrid,
+  navigationDisabled = false,
+  onNavMove,
 }: NavigationOverlayProps) {
   // Si mobile, on peut rendre une version compacte
   if (isMobile) {
@@ -183,11 +187,67 @@ export default function NavigationOverlay({
               }`}
             >
               {isNavigationMode
-                ? "Déplacement activé"
-                : "Création de pixel art"}
+                ? navigationDisabled
+                  ? "Navigation souris désactivée"
+                  : "Déplacement activé"
+                : navigationDisabled
+                  ? "Zoom élevé - Navigation clavier recommandée"
+                  : "Création de pixel art"}
             </p>
           </div>
         </div>
+
+        {/* Message et boutons navigation clavier si navigation souris désactivée */}
+        {navigationDisabled && (
+          <div className="my-2 p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 flex flex-col items-center">
+            <div className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-2 text-center">
+              🔍 Zoom élevé détecté !<br />
+              <span className="text-xs font-normal">
+                Navigation souris désactivée (+ de 20000 pixels visibles)
+              </span>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 text-center">
+              Utilisez les boutons ci-dessous ou le clavier pour naviguer
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+                title="Haut (Z ou ↑)"
+                onClick={() => onNavMove && onNavMove("up")}
+              >
+                ↑
+              </button>
+              <button
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+                title="Gauche (Q ou ←)"
+                onClick={() => onNavMove && onNavMove("left")}
+              >
+                ←
+              </button>
+              <button
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+                title="Bas (S ou ↓)"
+                onClick={() => onNavMove && onNavMove("down")}
+              >
+                ↓
+              </button>
+              <button
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors duration-200"
+                title="Droite (D ou →)"
+                onClick={() => onNavMove && onNavMove("right")}
+              >
+                →
+              </button>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center">
+              <span className="font-medium">Clavier :</span> ZQSD ou flèches
+              directionnelles
+              <br />
+              <span className="font-medium">Zoom :</span> Molette de souris
+              toujours disponible
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
           {isNavigationMode ? (

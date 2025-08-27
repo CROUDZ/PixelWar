@@ -19,6 +19,25 @@ import {
 import { CanvasMonitor } from "@/lib/canvas-monitor";
 import ValidePixel from "./ValidePixel";
 
+const pixelWidth = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
+const pixelHeight = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
+
+// Helper function: convertit #RRGGBB ou #RGB -> Uint32 dans le buffer (little-endian ABGR pour ImageData)
+const hexToRGBAUint32 = (hex: string): number => {
+  if (!hex) return 0xffffffff;
+  let h = hex.replace("#", "");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  if (h.length !== 6) return 0xffffffff;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (255 << 24) | (b << 16) | (g << 8) | r;
+};
+
 // Interface pour l'aperçu admin
 interface AdminPreview {
   x: number;
@@ -31,8 +50,6 @@ interface AdminPreview {
 
 // Props du composant PixelCanvas
 interface PixelCanvasProps {
-  pixelWidth?: number;
-  pixelHeight?: number;
   selectedColor?: string;
   onStateChange?: (state: {
     isNavigationMode: boolean;
@@ -42,6 +59,8 @@ interface PixelCanvasProps {
     adminSelectionStart: { x: number; y: number } | null;
     zoom: number;
     pan: { x: number; y: number };
+    navigationDisabled: boolean;
+    onNavMove: (direction: "up" | "down" | "left" | "right") => void;
   }) => void;
   showAdminPanelProp?: boolean;
   adminSelectedSizeProp?: number;
@@ -63,8 +82,6 @@ export type PixelCanvasHandle = {
 const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
   function PixelCanvas(
     {
-      pixelWidth = 100,
-      pixelHeight = 100,
       selectedColor = "#000000",
       onStateChange,
       showAdminPanelProp,
@@ -79,10 +96,30 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     const userId = session?.user?.id ?? null;
     const isAdmin = session?.user?.role === "ADMIN";
 
-    // Références et états
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+    // Références pour les canvas (bg + overlay)
+    const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const bgCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+    const overlayCtxRef = useRef<CanvasRenderingContext2D | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+
+    // Références pour l'offscreen rendering
+    const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const offscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+    const offscreenImageDataRef = useRef<ImageData | null>(null);
+    const bufferRef = useRef<Uint32Array | null>(null);
+
+    const lastHoverProcessRef = useRef<number>(0);
+
+    // Flags de redraw pour éviter les rendus inutiles
+    const needsRedrawRef = useRef({ bg: false, overlay: false });
+    const offscreenDirtyRef = useRef(false);
+
+    // Refs pour éviter setState intensifs
+    const zoomRef = useRef(1);
+    const panRef = useRef({ x: 0, y: 0 });
+    const hoverRef = useRef<{ x: number; y: number } | null>(null);
+    const pendingPointerRef = useRef<{ x: number; y: number } | null>(null);
 
     const gridRef = useRef<string[] | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -90,10 +127,6 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       width: 0,
       height: 0,
     });
-    const [hoverPixel, setHoverPixel] = useState<{
-      x: number;
-      y: number;
-    } | null>(null);
     const [isGridLoaded, setIsGridLoaded] = useState(false);
 
     // État de connexion WebSocket centralisé
@@ -104,7 +137,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       reconnectAttempts: 0,
     });
 
-    // Navigation
+    // Navigation (utilise des refs pour éviter setState intensifs)
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -112,6 +145,19 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
     const [isNavigationMode, setIsNavigationMode] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+
+    // Synchroniser les refs avec les états
+    useEffect(() => {
+      zoomRef.current = zoom;
+      needsRedrawRef.current.bg = true;
+      needsRedrawRef.current.overlay = true;
+    }, [zoom]);
+
+    useEffect(() => {
+      panRef.current = pan;
+      needsRedrawRef.current.bg = true;
+      needsRedrawRef.current.overlay = true;
+    }, [pan]);
 
     // Validation
     const [showValidation, setShowValidation] = useState(false);
@@ -139,7 +185,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
 
     // Débogage : log des mises à jour manquées
     useEffect(() => {
-      if (missedUpdates > 0) {
+      if (missedUpdates > 0 && process.env.NODE_ENV !== "production") {
         console.warn(`[PixelCanvas] Mises à jour manquées : ${missedUpdates}`);
         console.log(
           "[PixelCanvas] (FR) Nombre de mises à jour manquées :",
@@ -154,28 +200,132 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       return canvasDisplaySize.width / dimensions.width;
     }, [dimensions.width, canvasDisplaySize.width]);
 
-    // Conversion écran -> grille
-    const screenToGrid = useCallback(
-      (screenX: number, screenY: number) => {
-        const canvas = canvasRef.current;
-        if (!canvas || dimensions.width === 0 || pixelSize === 0) {
-          return { x: -1, y: -1 };
+// Calcul du nombre de pixels visibles dans le viewport (UTILISE CSS pixels, pas device pixels)
+const visiblePixelCount = useMemo(() => {
+  if (dimensions.width === 0 || dimensions.height === 0) return 0;
+  const canvas = bgCanvasRef.current;
+  if (!canvas) return 0;
+
+  // obtenir la taille en CSS pixels (clientWidth = CSS px)
+  const cssWidth = canvas.clientWidth || canvas.width / (window.devicePixelRatio || 1);
+  const cssHeight = canvas.clientHeight || canvas.height / (window.devicePixelRatio || 1);
+
+  // Utiliser l'état zoom au lieu de zoomRef.current pour déclencher le recalcul
+  const cssPixelSize = zoom || (canvasDisplaySize.width / Math.max(1, dimensions.width));
+
+  const visiblePixelsX = Math.ceil(cssWidth / cssPixelSize);
+  const visiblePixelsY = Math.ceil(cssHeight / cssPixelSize);
+
+  return Math.min(visiblePixelsX * visiblePixelsY, dimensions.width * dimensions.height);
+}, [dimensions, canvasDisplaySize.width, zoom]); // Ajouter zoom dans les dépendances
+
+
+const shouldDisableMouseMove = useMemo(() => visiblePixelCount > 20000, [visiblePixelCount]);
+
+    // Initialisation offscreen canvas et buffer
+    const initOffscreenCanvas = useCallback(
+      (gridWidth: number, gridHeight: number, grid?: string[]) => {
+        const off = document.createElement("canvas");
+        off.width = gridWidth;
+        off.height = gridHeight;
+        const offCtx = off.getContext("2d")!;
+        const imageData = offCtx.createImageData(gridWidth, gridHeight);
+        const buffer = new Uint32Array(imageData.data.buffer);
+
+        // Remplir buffer depuis la grille
+        if (grid && grid.length === buffer.length) {
+          for (let i = 0; i < buffer.length; i++) {
+            buffer[i] = hexToRGBAUint32(grid[i] ?? "#FFFFFF");
+          }
+        } else {
+          buffer.fill(hexToRGBAUint32("#FFFFFF"));
         }
-        const rect = canvas.getBoundingClientRect();
-        const canvasX = screenX - rect.left;
-        const canvasY = screenY - rect.top;
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const realCanvasX = canvasX * scaleX;
-        const realCanvasY = canvasY * scaleY;
-        const transformedX = realCanvasX / zoom - pan.x;
-        const transformedY = realCanvasY / zoom - pan.y;
-        return {
-          x: Math.floor(transformedX / pixelSize),
-          y: Math.floor(transformedY / pixelSize),
-        };
+
+        offCtx.putImageData(imageData, 0, 0);
+
+        // Stocker dans les refs
+        offscreenCanvasRef.current = off;
+        offscreenCtxRef.current = offCtx;
+        offscreenImageDataRef.current = imageData;
+        bufferRef.current = buffer;
+        offscreenDirtyRef.current = false;
+
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] Offscreen canvas initialisé:",
+            gridWidth,
+            "x",
+            gridHeight,
+          );
+        }
       },
-      [dimensions, zoom, pan, pixelSize],
+      [],
+    );
+
+    // Conversion écran -> grille
+    // Conversion écran -> grille (utilise CSS pixels et la même convention que le rendu)
+// Conversion écran -> grille (CSS px coherent avec zoomRef)
+const screenToGrid = useCallback(
+  (screenX: number, screenY: number) => {
+    const canvas = overlayCanvasRef.current || bgCanvasRef.current;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) {
+      return { x: -1, y: -1 };
+    }
+    const rect = canvas.getBoundingClientRect();
+    // coords en CSS pixels
+    const canvasX_css = screenX - rect.left;
+    const canvasY_css = screenY - rect.top;
+
+    // finalCssPixelSize = CSS px par pixel de grille (zoomRef est défini comme ça)
+    const finalCssPixelSize = zoomRef.current;
+    if (!finalCssPixelSize || finalCssPixelSize <= 0) return { x: -1, y: -1 };
+
+    // panRef.current est en CSS pixels
+    const transformedX_css = canvasX_css - panRef.current.x;
+    const transformedY_css = canvasY_css - panRef.current.y;
+
+    return {
+      x: Math.floor(transformedX_css / finalCssPixelSize),
+      y: Math.floor(transformedY_css / finalCssPixelSize),
+    };
+  },
+  [dimensions],
+);
+
+
+    // Fonction pour déplacer la vue avec le clavier ou les boutons
+    const handleNavMove = useCallback(
+      (direction: "up" | "down" | "left" | "right") => {
+        // distance en CSS pixels (tu peux ajuster 50 => autre valeur)
+        const moveCss = 50;
+        const newPan = { ...panRef.current };
+        switch (direction) {
+          case "up":
+            newPan.y += moveCss; // move canvas down (viewer moves up)
+            break;
+          case "down":
+            newPan.y -= moveCss;
+            break;
+          case "left":
+            newPan.x += moveCss;
+            break;
+          case "right":
+            newPan.x -= moveCss;
+            break;
+        }
+        panRef.current = newPan;
+        setPan(newPan);
+        needsRedrawRef.current.bg = true;
+        needsRedrawRef.current.overlay = true;
+
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            `[PixelCanvas] Navigation ${direction}, nouveau pan:`,
+            newPan,
+          );
+        }
+      },
+      [],
     );
 
     // Notifier le parent du changement d'état
@@ -188,6 +338,8 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         adminSelectionStart,
         zoom,
         pan,
+        navigationDisabled: shouldDisableMouseMove,
+        onNavMove: handleNavMove,
       }),
       [
         isNavigationMode,
@@ -197,15 +349,19 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         adminSelectionStart,
         zoom,
         pan,
+        shouldDisableMouseMove,
+        handleNavMove,
       ],
     );
 
     useEffect(() => {
       if (typeof onStateChange === "function") {
-        console.log(
-          "[PixelCanvas] (FR) Changement d'état transmis au parent :",
-          stateChangeData,
-        );
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] (FR) Changement d'état transmis au parent :",
+            stateChangeData,
+          );
+        }
         onStateChange(stateChangeData);
       }
     }, [stateChangeData, onStateChange]);
@@ -214,191 +370,215 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       ref,
       () => ({
         zoomIn: () => setZoom((p) => Math.min(10, p * 1.2)),
-        zoomOut: () => setZoom((p) => Math.max(0.5, p / 1.2)),
-        setZoom: (z: number) => setZoom(Math.max(0.5, Math.min(10, z))),
+        zoomOut: () => setZoom((p) => Math.max(1, p / 1.2)),
+        setZoom: (z: number) => setZoom(Math.max(1, Math.min(10, z))),
         resetView: () => {
           setZoom(1);
           setPan({ x: 0, y: 0 });
         },
-        getZoom: () => zoom,
+        getZoom: () => zoomRef.current,
         setPan: (p: { x: number; y: number }) => setPan(p),
         getPixelSize: () => pixelSize,
       }),
-      [zoom, pixelSize],
+      [pixelSize],
     );
 
     // Synchronisation des props contrôlées
     useEffect(() => {
       if (typeof showAdminPanelProp === "boolean") {
-        console.log(
-          "[PixelCanvas] (FR) Prop showAdminPanel modifiée :",
-          showAdminPanelProp,
-        );
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] (FR) Prop showAdminPanel modifiée :",
+            showAdminPanelProp,
+          );
+        }
         setShowAdminPanel(showAdminPanelProp);
       }
     }, [showAdminPanelProp]);
     useEffect(() => {
       if (typeof adminSelectedSizeProp === "number") {
-        console.log(
-          "[PixelCanvas] (FR) Prop adminSelectedSize modifiée :",
-          adminSelectedSizeProp,
-        );
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] (FR) Prop adminSelectedSize modifiée :",
+            adminSelectedSizeProp,
+          );
+        }
         setAdminSelectedSize(adminSelectedSizeProp);
       }
     }, [adminSelectedSizeProp]);
     useEffect(() => {
       if (typeof adminColorProp === "string") {
-        console.log(
-          "[PixelCanvas] (FR) Prop adminColor modifiée :",
-          adminColorProp,
-        );
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] (FR) Prop adminColor modifiée :",
+            adminColorProp,
+          );
+        }
         setAdminColor(adminColorProp);
       }
     }, [adminColorProp]);
     useEffect(() => {
       if (typeof isAdminSelectingProp === "boolean") {
-        console.log(
-          "[PixelCanvas] (FR) Prop isAdminSelecting modifiée :",
-          isAdminSelectingProp,
-        );
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[PixelCanvas] (FR) Prop isAdminSelecting modifiée :",
+            isAdminSelectingProp,
+          );
+        }
         setIsAdminSelecting(isAdminSelectingProp);
       }
     }, [isAdminSelectingProp]);
 
-    // Fonction de redraw
-    const redrawCanvas = useCallback(() => {
-      const canvas = canvasRef.current;
-      const ctx = ctxRef.current;
-      const grid = gridRef.current;
-      if (!canvas || !ctx || dimensions.width === 0 || pixelSize === 0) return;
+    // Remplacer la fonction redrawBgCanvas existante par celle-ci
+const redrawBgCanvas = useCallback(() => {
+  const canvas = bgCanvasRef.current;
+  const ctx = bgCtxRef.current;
+  const offscreenCanvas = offscreenCanvasRef.current;
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!canvas || !ctx) return;
 
-      if (!grid || !isGridLoaded) {
-        ctx.fillStyle = "#f0f0f0";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#666";
-        ctx.font = "16px Arial";
-        ctx.textAlign = "center";
-        const text = connectionState.isConnecting
-          ? "Connexion..."
-          : "Chargement de la toile...";
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-        console.log(
-          "[PixelCanvas] (FR) Affichage du texte de chargement :",
-          text,
-        );
-        return;
-      }
+  const dpr = window.devicePixelRatio || 1;
 
+  // clear en device pixels
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+
+  // affichage placeholder si grille pas encore prête
+  if (!isGridLoaded || !offscreenCanvas) {
+    ctx.fillStyle = "#f0f0f0";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#666";
+    ctx.font = `${16 * dpr}px Arial`;
+    ctx.textAlign = "center";
+    const text = connectionState.isConnecting ? "Connexion..." : "Chargement de la toile...";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  // Transform : 1 unité = 1 pixel de grille, converti en device pixels
+  const scale = dpr * zoomRef.current;
+  // panRef.current est en CSS px -> on multiplie par dpr pour device px translation
+  const tx = Math.round(panRef.current.x * dpr);
+  const ty = Math.round(panRef.current.y * dpr);
+
+  // Appliquer transform (scale et translation)
+  ctx.setTransform(scale, 0, 0, scale, tx, ty);
+  ctx.imageSmoothingEnabled = false;
+
+  // Dessiner l'offscreen (1:1 en pixels de grille). Le transform gère le scaling.
+  try {
+    ctx.drawImage(offscreenCanvas, 0, 0);
+  } catch (e) {
+    if (process.env.NODE_ENV !== "production") console.error("[PixelCanvas] drawImage failed:", e);
+  }
+
+  // RAZ du transform (pratique pour les clears suivants)
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}, [isGridLoaded, connectionState.isConnecting]);
+
+// Centre et adapte le zoom automatiquement quand la grille est prête ou quand la taille du canvas change.
+useEffect(() => {
+  if (!isGridLoaded) return;
+  if (dimensions.width === 0 || dimensions.height === 0) return;
+  if (canvasDisplaySize.width === 0 || canvasDisplaySize.height === 0) return;
+
+  // CSS px par pixel de grille pour tout voir
+  const pixelSizeCSS_X = canvasDisplaySize.width / dimensions.width;
+  const pixelSizeCSS_Y = canvasDisplaySize.height / dimensions.height;
+  const fitPixelSizeCSS = Math.min(pixelSizeCSS_X, pixelSizeCSS_Y);
+
+  // zoomRef représente LA taille CSS (px) d'un pixel de grille
+  zoomRef.current = fitPixelSizeCSS;
+  setZoom(fitPixelSizeCSS);
+
+  // center pan en CSS pixels
+  const finalGridWidthCss = dimensions.width * fitPixelSizeCSS;
+  const finalGridHeightCss = dimensions.height * fitPixelSizeCSS;
+  panRef.current = {
+    x: Math.round((canvasDisplaySize.width - finalGridWidthCss) / 2),
+    y: Math.round((canvasDisplaySize.height - finalGridHeightCss) / 2),
+  };
+  setPan({ x: panRef.current.x, y: panRef.current.y });
+
+  needsRedrawRef.current.bg = true;
+  needsRedrawRef.current.overlay = true;
+}, [isGridLoaded, dimensions.width, dimensions.height, canvasDisplaySize.width, canvasDisplaySize.height]);
+
+
+
+
+    // Fonction de redraw du overlay canvas
+const redrawOverlayCanvas = useCallback(() => {
+  const canvas = overlayCanvasRef.current;
+  const ctx = overlayCtxRef.current;
+  if (!canvas || !ctx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+
+  // clear en device pixels
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+
+  if (!isGridLoaded) return;
+
+  // Même transform que pour le bg : 1 unité = 1 pixel de grille
+  const scale = dpr * zoomRef.current;
+  const tx = Math.round(panRef.current.x * dpr);
+  const ty = Math.round(panRef.current.y * dpr);
+  ctx.setTransform(scale, 0, 0, scale, tx, ty);
+
+  // Dessiner admin preview en unités de grille
+  if (isAdmin && adminPreview) {
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = adminPreview.color;
+    ctx.fillRect(adminPreview.x, adminPreview.y, adminPreview.width, adminPreview.height);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = adminPreview.isSelecting ? "#00FF00" : "#FF0000";
+    ctx.lineWidth = 2 / zoomRef.current; // largeur en unités grille adaptée à l'écran
+    ctx.strokeRect(adminPreview.x, adminPreview.y, adminPreview.width, adminPreview.height);
+    ctx.restore();
+  }
+
+  // Hover (1x1 pixel de grille)
+  if (!showAdminPanel && hoverRef.current) {
+    const { x, y } = hoverRef.current;
+    if (x >= 0 && x < dimensions.width && y >= 0 && y < dimensions.height) {
       ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      ctx.scale(zoom, zoom);
-      ctx.translate(pan.x, pan.y);
-
-      const viewportStartX = Math.max(0, Math.floor(-pan.x / pixelSize));
-      const viewportStartY = Math.max(0, Math.floor(-pan.y / pixelSize));
-      const viewportEndX = Math.min(
-        dimensions.width,
-        Math.ceil((canvas.width / zoom - pan.x) / pixelSize),
-      );
-      const viewportEndY = Math.min(
-        dimensions.height,
-        Math.ceil((canvas.height / zoom - pan.y) / pixelSize),
-      );
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(
-        0,
-        0,
-        dimensions.width * pixelSize,
-        dimensions.height * pixelSize,
-      );
-
-      for (let y = viewportStartY; y < viewportEndY; y++) {
-        for (let x = viewportStartX; x < viewportEndX; x++) {
-          const color = grid[y * dimensions.width + x] ?? "#FFFFFF";
-          if (color !== "#FFFFFF") {
-            ctx.fillStyle = color;
-            const pixelX = x * pixelSize;
-            const pixelY = y * pixelSize;
-            ctx.fillRect(
-              pixelX,
-              pixelY,
-              Math.ceil(pixelSize),
-              Math.ceil(pixelSize),
-            );
-          }
-        }
-      }
-
-      if (isAdmin && adminPreview) {
-        ctx.save();
-        ctx.globalAlpha = 0.6;
-        ctx.fillStyle = adminPreview.color;
-        const previewX = adminPreview.x * pixelSize;
-        const previewY = adminPreview.y * pixelSize;
-        const previewWidth = adminPreview.width * pixelSize;
-        const previewHeight = adminPreview.height * pixelSize;
-        ctx.fillRect(previewX, previewY, previewWidth, previewHeight);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = adminPreview.isSelecting ? "#00FF00" : "#FF0000";
-        ctx.lineWidth = 2 / zoom;
-        ctx.strokeRect(previewX, previewY, previewWidth, previewHeight);
-        ctx.restore();
-      }
-
-      ctx.strokeStyle = "#555555";
-      ctx.lineWidth = 2 / zoom;
-      const canvasWidth = dimensions.width * pixelSize;
-      const canvasHeight = dimensions.height * pixelSize;
-      ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
-
-      if (!showAdminPanel && hoverPixel) {
-        const { x, y } = hoverPixel;
-        if (x >= 0 && x < dimensions.width && y >= 0 && y < dimensions.height) {
-          ctx.save();
-          ctx.globalAlpha = 0.5;
-          ctx.fillStyle = selectedColor;
-          const hoverX = x * pixelSize;
-          const hoverY = y * pixelSize;
-          ctx.fillRect(
-            hoverX,
-            hoverY,
-            Math.ceil(pixelSize),
-            Math.ceil(pixelSize),
-          );
-          ctx.restore();
-        }
-      }
-
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = selectedColor;
+      ctx.fillRect(x, y, 1, 1); // 1 unité = 1 pixel grille
       ctx.restore();
-    }, [
-      zoom,
-      pan,
-      dimensions,
-      hoverPixel,
-      selectedColor,
-      isAdmin,
-      adminPreview,
-      showAdminPanel,
-      pixelSize,
-      connectionState.isConnecting,
-      isGridLoaded,
-    ]);
+    }
+  }
+
+  // Bordure en unités grille
+  ctx.strokeStyle = "#555555";
+  ctx.lineWidth = 2 / zoomRef.current;
+  ctx.strokeRect(0, 0, dimensions.width, dimensions.height);
+
+  // remettre transform à l'identité
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}, [isAdmin, adminPreview, selectedColor, isGridLoaded, dimensions.width, dimensions.height, showAdminPanel]);
+
 
     // Setup WebSocket amélioré avec gestion centralisée
     useEffect(() => {
       if (typeof window === "undefined") return;
 
-      console.log(
-        "[PixelCanvas] (FR) Initialisation des abonnements WebSocket",
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.log(
+          "[PixelCanvas] (FR) Initialisation des abonnements WebSocket",
+        );
+      }
 
       // Abonnement aux changements d'état de connexion
       const unsubscribeConnectionState = subscribeConnectionState((state) => {
-        console.log("[PixelCanvas] (FR) État de connexion modifié :", state);
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[PixelCanvas] (FR) État de connexion modifié :", state);
+        }
         setConnectionState(state);
 
         // Update monitor
@@ -419,25 +599,42 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
 
       // Abonnement aux messages WebSocket
       const unsubscribeMessages = subscribeWS((data) => {
-        console.log("[PixelCanvas] (FR) Message reçu :", data.type);
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[PixelCanvas] (FR) Message reçu :", data.type);
+        }
 
         try {
           if (data.type === "init") {
             const w = Number(data.width) || pixelWidth;
             const h = Number(data.height) || pixelHeight;
+            if (process.env.NODE_ENV !== "production") {
+              console.log(
+                "[PixelCanvas] (FR) Dimensions de la grille :",
+                Number(data.width),
+                pixelWidth,
+              );
+              console.log(data.grid);
+            }
             setDimensions({ width: w, height: h });
 
+            let grid: string[];
             if (Array.isArray(data.grid) && data.grid.length === w * h) {
-              gridRef.current = data.grid.map((c: string) =>
+              grid = data.grid.map((c: string) =>
                 typeof c === "string" ? c.toUpperCase() : "#FFFFFF",
               );
             } else {
-              gridRef.current = new Array(w * h).fill("#FFFFFF");
+              grid = new Array(w * h).fill("#FFFFFF");
             }
+
+            gridRef.current = grid;
+            initOffscreenCanvas(w, h, grid);
 
             setIsGridLoaded(true);
             setLastSyncTimestamp(Date.now());
             setMissedUpdates(0);
+
+            needsRedrawRef.current.bg = true;
+            needsRedrawRef.current.overlay = true;
 
             // Update monitor
             monitor.updateGridStatus("loaded");
@@ -453,11 +650,6 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
                 clientToken: `${Date.now()}-${Math.random()}`,
               });
             }
-            console.log(
-              "[PixelCanvas] (FR) Grille initialisée avec dimensions :",
-              w,
-              h,
-            );
             return;
           }
 
@@ -472,7 +664,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               return;
             }
 
-            // Vérification des mises à jour manquées (validation de synchronisation basique)
+            // Vérification des mises à jour manquées
             if (
               timestamp &&
               typeof timestamp === "number" &&
@@ -480,15 +672,17 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             ) {
               const timeDiff = timestamp - lastSyncTimestamp;
               if (timeDiff < 0) {
-                console.warn(
-                  "[PixelCanvas] (FR) Mise à jour pixel obsolète reçue",
-                );
+                if (process.env.NODE_ENV !== "production") {
+                  console.warn(
+                    "[PixelCanvas] (FR) Mise à jour pixel obsolète reçue",
+                  );
+                }
                 setMissedUpdates((prev) => {
                   const newCount = prev + 1;
                   monitor.incrementMissedUpdates();
                   return newCount;
                 });
-                return; // Ignorer les mises à jour obsolètes
+                return;
               }
               setLastSyncTimestamp(timestamp);
               monitor.updateSyncTime();
@@ -496,42 +690,66 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
 
             const index = y * dimensions.width + x;
             if (index >= 0 && index < gridRef.current.length) {
-              gridRef.current[index] = String(color ?? "#FFFFFF").toUpperCase();
-              console.log("[PixelCanvas] (FR) Pixel mis à jour :", {
-                x,
-                y,
-                color,
-              });
+              const colorUpper = String(color ?? "#FFFFFF").toUpperCase();
+              gridRef.current[index] = colorUpper;
+
+              // Mise à jour du buffer
+              if (bufferRef.current) {
+                bufferRef.current[index] = hexToRGBAUint32(colorUpper);
+                offscreenDirtyRef.current = true;
+              }
+
+              needsRedrawRef.current.bg = true;
+
+              if (process.env.NODE_ENV !== "production") {
+                console.log("[PixelCanvas] (FR) Pixel mis à jour :", {
+                  x,
+                  y,
+                  color,
+                });
+              }
             }
             return;
           }
 
           if (data.type === "resync") {
-            console.log(
-              "[PixelCanvas] (FR) Demande de resynchronisation du serveur",
-            );
-            // Request full grid resync
+            if (process.env.NODE_ENV !== "production") {
+              console.log(
+                "[PixelCanvas] (FR) Demande de resynchronisation du serveur",
+              );
+            }
             sendWS({ type: "requestInit", userId });
             return;
           }
 
           if (data.type === "canvasClear") {
-            console.log("[PixelCanvas] (FR) Canvas effacé par l'admin :", data);
+            if (process.env.NODE_ENV !== "production") {
+              console.log(
+                "[PixelCanvas] (FR) Canvas effacé par l'admin :",
+                data,
+              );
+            }
 
-            // Réinitialiser la grille avec le nouvel état vide
             if (
               Array.isArray(data.grid) &&
               data.grid.length === dimensions.width * dimensions.height
             ) {
               gridRef.current = [...data.grid];
+              initOffscreenCanvas(
+                dimensions.width,
+                dimensions.height,
+                gridRef.current,
+              );
+
               setLastSyncTimestamp(
                 data.timestamp && typeof data.timestamp === "number"
                   ? data.timestamp
                   : Date.now(),
               );
 
-              // Réinitialiser le compteur de mises à jour manquées
               setMissedUpdates(0);
+              needsRedrawRef.current.bg = true;
+              needsRedrawRef.current.overlay = true;
 
               // Update monitor
               monitor.updateSyncTime();
@@ -542,13 +760,17 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
                 dimensions.width * dimensions.height,
               );
 
-              console.log(
-                "[PixelCanvas] (FR) Canvas effacé et réinitialisé avec succès",
-              );
+              if (process.env.NODE_ENV !== "production") {
+                console.log(
+                  "[PixelCanvas] (FR) Canvas effacé et réinitialisé avec succès",
+                );
+              }
             } else {
-              console.warn(
-                "[PixelCanvas] (FR) Données d'effacement de canvas invalides, demande de resynchronisation",
-              );
+              if (process.env.NODE_ENV !== "production") {
+                console.warn(
+                  "[PixelCanvas] (FR) Données d'effacement de canvas invalides, demande de resynchronisation",
+                );
+              }
               monitor.updateGridStatus("error");
               sendWS({ type: "requestInit", userId });
             }
@@ -568,12 +790,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       });
 
       return () => {
-        console.log("[PixelCanvas] (FR) Nettoyage des abonnements WebSocket");
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[PixelCanvas] (FR) Nettoyage des abonnements WebSocket");
+        }
         unsubscribeConnectionState();
         unsubscribeMessages();
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pixelWidth, pixelHeight, userId]);
+    }, [pixelWidth, pixelHeight, userId, dimensions.width, dimensions.height]);
 
     // Initialisation des dimensions lors du changement des props
     useEffect(() => {
@@ -581,12 +805,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       setIsGridLoaded(false);
       setLastSyncTimestamp(0);
       setMissedUpdates(0);
-      console.log(
-        "[PixelCanvas] (FR) Dimensions du canvas modifiées :",
-        pixelWidth,
-        pixelHeight,
-      );
-    }, [pixelWidth, pixelHeight]);
+    }, []);
 
     // Fallback init grid si le serveur ne répond jamais et qu'on est connecté
     useEffect(() => {
@@ -597,13 +816,18 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           dimensions.height > 0 &&
           connectionState.isConnected
         ) {
-          console.warn(
-            "[PixelCanvas] (FR) Fallback : initialisation d'une grille vide",
-          );
-          gridRef.current = new Array(
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(
+              "[PixelCanvas] (FR) Fallback : initialisation d'une grille vide",
+            );
+          }
+          const emptyGrid = new Array(
             dimensions.width * dimensions.height,
           ).fill("#FFFFFF");
+          gridRef.current = emptyGrid;
+          initOffscreenCanvas(dimensions.width, dimensions.height, emptyGrid);
           setIsGridLoaded(true);
+          needsRedrawRef.current.bg = true;
         }
       }, 5000);
       return () => clearTimeout(timeoutId);
@@ -612,7 +836,58 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       dimensions.height,
       isGridLoaded,
       connectionState.isConnected,
+      initOffscreenCanvas,
     ]);
+
+    // Traitement batché des mouvements de pointeur
+useEffect(() => {
+  let rafId: number | null = null;
+
+  const processPendingPointer = () => {
+    const now = performance.now();
+    const pending = pendingPointerRef.current;
+
+    if (pending) {
+      // n'essaye de mettre à jour le hover que si suffisamment de temps s'est écoulé
+        const gridPos = screenToGrid(pending.x, pending.y);
+        if (
+          gridPos.x >= 0 &&
+          gridPos.x < dimensions.width &&
+          gridPos.y >= 0 &&
+          gridPos.y < dimensions.height
+        ) {
+          const newHover = { x: gridPos.x, y: gridPos.y };
+          if (
+            !hoverRef.current ||
+            hoverRef.current.x !== newHover.x ||
+            hoverRef.current.y !== newHover.y
+          ) {
+            hoverRef.current = newHover;
+            needsRedrawRef.current.overlay = true;
+          }
+        } else {
+          if (hoverRef.current) {
+            hoverRef.current = null;
+            needsRedrawRef.current.overlay = true;
+          }
+
+        // on a consommé le pending (on peut le vider)
+        pendingPointerRef.current = null;
+        lastHoverProcessRef.current = now;
+      }
+      // sinon on attend (on laisse pending en place pour la prochaine passe)
+    }
+
+    rafId = requestAnimationFrame(processPendingPointer);
+  };
+
+  rafId = requestAnimationFrame(processPendingPointer);
+
+  return () => {
+    if (rafId) cancelAnimationFrame(rafId);
+  };
+}, [ shouldDisableMouseMove, screenToGrid, dimensions]);
+
 
     // events & resize: no longer forcing body overflow hidden (préserve menus mobiles)
     useEffect(() => {
@@ -641,12 +916,41 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         canvasSize = Math.max(300, Math.min(canvasSize, 1200));
         canvasSize = Math.floor(canvasSize);
         setCanvasDisplaySize({ width: canvasSize, height: canvasSize });
+        needsRedrawRef.current.bg = true;
+        needsRedrawRef.current.overlay = true;
         checkMobile();
       };
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (!isMobile && (e.key === "Shift" || e.key === "Control")) {
           setIsNavigationMode(true);
+        }
+
+        // Navigation avec ZQSD et flèches (toujours actif, même si shouldDisableMouseMove est true)
+        if (!showAdminPanel) {
+          // Pas de navigation clavier en mode admin
+          switch (e.key.toLowerCase()) {
+            case "z":
+            case "arrowup":
+              e.preventDefault();
+              handleNavMove("up");
+              break;
+            case "s":
+            case "arrowdown":
+              e.preventDefault();
+              handleNavMove("down");
+              break;
+            case "q":
+            case "arrowleft":
+              e.preventDefault();
+              handleNavMove("left");
+              break;
+            case "d":
+            case "arrowright":
+              e.preventDefault();
+              handleNavMove("right");
+              break;
+          }
         }
       };
 
@@ -655,29 +959,10 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           setIsNavigationMode(false);
         }
       };
-
-      const canvas = canvasRef.current;
-      const handleWheel = (e: WheelEvent) => {
-        e.preventDefault();
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        const newZoom = Math.max(0.5, Math.min(10, zoom * zoomFactor));
-        const zoomRatio = newZoom / zoom;
-        setPan((prev) => ({
-          x: mouseX / zoom + (prev.x - mouseX / zoom) * zoomRatio,
-          y: mouseY / zoom + (prev.y - mouseY / zoom) * zoomRatio,
-        }));
-        setZoom(newZoom);
-      };
-
+     
       window.addEventListener("resize", resizeCanvas);
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
-      if (canvas)
-        canvas.addEventListener("wheel", handleWheel, { passive: false });
 
       resizeCanvas();
 
@@ -685,20 +970,82 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         window.removeEventListener("resize", resizeCanvas);
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
-        if (canvas) canvas.removeEventListener("wheel", handleWheel);
       };
-    }, [isMobile, zoom, pixelWidth, pixelHeight]);
+    }, [isMobile, handleNavMove, showAdminPanel]);
+
+    // --- replace previous wheel attachment with this robust effect ---
+useEffect(() => {
+  // target l'overlay s'il existe sinon le bg
+  const target = overlayCanvasRef.current || bgCanvasRef.current;
+  if (!target) return;
+
+const handleWheel = (e: WheelEvent) => {
+  e.preventDefault();
+  const rect = (overlayCanvasRef.current || bgCanvasRef.current)!.getBoundingClientRect();
+  const mouseX_css = e.clientX - rect.left;
+  const mouseY_css = e.clientY - rect.top;
+
+  const oldZoom = zoomRef.current;
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newZoom = Math.max(0.5, Math.min(40, oldZoom * zoomFactor)); // clamp raisonnable
+
+  const zoomRatio = newZoom / oldZoom;
+
+  // garder le point sous la souris
+  panRef.current = {
+    x: mouseX_css - zoomRatio * (mouseX_css - panRef.current.x),
+    y: mouseY_css - zoomRatio * (mouseY_css - panRef.current.y),
+  };
+
+  zoomRef.current = newZoom;
+  setZoom(newZoom);
+  setPan({ x: panRef.current.x, y: panRef.current.y });
+
+  needsRedrawRef.current.bg = true;
+  needsRedrawRef.current.overlay = true;
+};
+
+
+  // Important: passive: false pour pouvoir preventDefault()
+  target.addEventListener("wheel", handleWheel, { passive: false });
+
+  return () => {
+    target.removeEventListener("wheel", handleWheel);
+  };
+}, []); // pas de dépendances qui recréeraient le handler inutilement
+
 
     // canvas context setup
     useEffect(() => {
-      const canvas = canvasRef.current;
-      if (canvas && canvasDisplaySize.width > 0) {
-        canvas.width = canvasDisplaySize.width;
-        canvas.height = canvasDisplaySize.height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctxRef.current = ctx;
-          ctx.imageSmoothingEnabled = false;
+      const bgCanvas = bgCanvasRef.current;
+      const overlayCanvas = overlayCanvasRef.current;
+
+      if (bgCanvas && overlayCanvas && canvasDisplaySize.width > 0) {
+        const dpr = window.devicePixelRatio || 1;
+
+        // Setup background canvas
+        bgCanvas.width = Math.floor(canvasDisplaySize.width * dpr);
+        bgCanvas.height = Math.floor(canvasDisplaySize.height * dpr);
+        bgCanvas.style.width = canvasDisplaySize.width + "px";
+        bgCanvas.style.height = canvasDisplaySize.height + "px";
+
+        // Setup overlay canvas
+        overlayCanvas.width = Math.floor(canvasDisplaySize.width * dpr);
+        overlayCanvas.height = Math.floor(canvasDisplaySize.height * dpr);
+        overlayCanvas.style.width = canvasDisplaySize.width + "px";
+        overlayCanvas.style.height = canvasDisplaySize.height + "px";
+
+        const bgCtx = bgCanvas.getContext("2d");
+        const overlayCtx = overlayCanvas.getContext("2d");
+
+        if (bgCtx && overlayCtx) {
+          bgCtxRef.current = bgCtx;
+          overlayCtxRef.current = overlayCtx;
+          bgCtx.imageSmoothingEnabled = false;
+          overlayCtx.imageSmoothingEnabled = false;
+
+          needsRedrawRef.current.bg = true;
+          needsRedrawRef.current.overlay = true;
         }
       }
     }, [canvasDisplaySize]);
@@ -707,14 +1054,19 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     const placeAdminBlock = useCallback(
       (x: number, y: number, width: number, height: number, color: string) => {
         if (!isWSConnected()) {
-          console.warn("[ADMIN] (FR) WebSocket non connecté");
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[ADMIN] (FR) WebSocket non connecté");
+          }
           return;
         }
         if (!gridRef.current)
           gridRef.current = new Array(
             dimensions.width * dimensions.height,
           ).fill("#FFFFFF");
+
         const pixels = [];
+        const colorUpper = color.toUpperCase();
+
         for (let dy = 0; dy < height; dy++) {
           for (let dx = 0; dx < width; dx++) {
             const px = x + dx;
@@ -726,11 +1078,22 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               py < dimensions.height
             ) {
               const index = py * dimensions.width + px;
-              gridRef.current[index] = color.toUpperCase();
+              gridRef.current[index] = colorUpper;
+
+              // Mise à jour du buffer
+              if (bufferRef.current) {
+                bufferRef.current[index] = hexToRGBAUint32(colorUpper);
+              }
+
               pixels.push({ x: px, y: py, color });
             }
           }
         }
+
+        if (bufferRef.current) {
+          offscreenDirtyRef.current = true;
+        }
+        needsRedrawRef.current.bg = true;
 
         // Essayer d'envoyer en batch d'abord
         const success = sendWS({
@@ -739,10 +1102,13 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           userId,
           isAdmin: true,
         });
+
         if (!success) {
-          console.warn(
-            "[ADMIN] (FR) Échec de l'envoi du bloc admin en batch, tentative pixel par pixel",
-          );
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(
+              "[ADMIN] (FR) Échec de l'envoi du bloc admin en batch, tentative pixel par pixel",
+            );
+          }
           // Fallback to individual pixel sends if batch failed
           pixels.forEach(({ x: px, y: py, color: pixelColor }) => {
             sendWS({
@@ -755,28 +1121,57 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             });
           });
         } else {
-          console.log(
-            "[ADMIN] (FR) Bloc admin envoyé avec succès :",
-            pixels.length,
-            "pixels",
-          );
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "[ADMIN] (FR) Bloc admin envoyé avec succès :",
+              pixels.length,
+              "pixels",
+            );
+          }
         }
       },
       [dimensions, userId],
     );
 
-    // RAF loop
+    // RAF principal avec optimisations
     useEffect(() => {
       const animate = () => {
-        redrawCanvas();
+        // Mise à jour de l'offscreen canvas si nécessaire
+        if (
+          offscreenDirtyRef.current &&
+          offscreenCtxRef.current &&
+          offscreenImageDataRef.current
+        ) {
+          offscreenCtxRef.current.putImageData(
+            offscreenImageDataRef.current,
+            0,
+            0,
+          );
+          offscreenDirtyRef.current = false;
+        }
+
+        // Redraw background seulement si nécessaire
+        if (needsRedrawRef.current.bg) {
+          redrawBgCanvas();
+          needsRedrawRef.current.bg = false;
+        }
+
+        // Redraw overlay seulement si nécessaire
+        if (needsRedrawRef.current.overlay) {
+          redrawOverlayCanvas();
+          needsRedrawRef.current.overlay = false;
+        }
+
         animationFrameRef.current = requestAnimationFrame(animate);
       };
+
       animationFrameRef.current = requestAnimationFrame(animate);
+
       return () => {
         if (animationFrameRef.current)
           cancelAnimationFrame(animationFrameRef.current);
       };
-    }, [redrawCanvas]);
+    }, [redrawBgCanvas, redrawOverlayCanvas]);
 
     // admin click/move handlers
     const handleAdminClick = useCallback(
@@ -802,6 +1197,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               color: adminColor,
               isSelecting: true,
             });
+            needsRedrawRef.current.overlay = true;
           } else {
             const minX = Math.min(adminSelectionStart.x, gridPos.x);
             const maxX = Math.max(adminSelectionStart.x, gridPos.x);
@@ -817,6 +1213,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             setAdminSelectionStart(null);
             setIsAdminSelecting(false);
             setAdminPreview(null);
+            needsRedrawRef.current.overlay = true;
           }
         } else {
           const half = Math.floor(adminSelectedSize / 2);
@@ -864,21 +1261,25 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           gridPos.y >= dimensions.height
         ) {
           setAdminPreview(null);
+          needsRedrawRef.current.overlay = true;
           return;
         }
+
+        let newPreview: AdminPreview | null = null;
+
         if (isAdminSelecting && adminSelectionStart) {
           const minX = Math.min(adminSelectionStart.x, gridPos.x);
           const maxX = Math.max(adminSelectionStart.x, gridPos.x);
           const minY = Math.min(adminSelectionStart.y, gridPos.y);
           const maxY = Math.max(adminSelectionStart.y, gridPos.y);
-          setAdminPreview({
+          newPreview = {
             x: minX,
             y: minY,
             width: maxX - minX + 1,
             height: maxY - minY + 1,
             color: adminColor,
             isSelecting: true,
-          });
+          };
         } else if (!isAdminSelecting) {
           const half = Math.floor(adminSelectedSize / 2);
           const startX = Math.max(0, gridPos.x - half);
@@ -891,15 +1292,18 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             dimensions.height - 1,
             startY + adminSelectedSize - 1,
           );
-          setAdminPreview({
+          newPreview = {
             x: startX,
             y: startY,
             width: endX - startX + 1,
             height: endY - startY + 1,
             color: adminColor,
             isSelecting: false,
-          });
+          };
         }
+
+        setAdminPreview(newPreview);
+        needsRedrawRef.current.overlay = true;
       },
       [
         isAdmin,
@@ -928,51 +1332,50 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       [isAdmin, showAdminPanel, handleAdminClick, isMobile, isNavigationMode],
     );
 
-    const handleMouseMove = useCallback(
-      (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (isAdmin && showAdminPanel) {
-          handleAdminMouseMove(e);
-          return;
-        }
-        if (isDragging) {
-          const deltaX = e.clientX - lastMousePos.x;
-          const deltaY = e.clientY - lastMousePos.y;
-          setHasDragged(true);
-          setPan((prev) => ({
-            x: prev.x + deltaX / zoom,
-            y: prev.y + deltaY / zoom,
-          }));
-          setLastMousePos({ x: e.clientX, y: e.clientY });
-          return;
-        }
-        const gridPos = screenToGrid(e.clientX, e.clientY);
-        if (
-          gridPos.x >= 0 &&
-          gridPos.x < dimensions.width &&
-          gridPos.y >= 0 &&
-          gridPos.y < dimensions.height
-        ) {
-          setHoverPixel(gridPos);
-        } else {
-          setHoverPixel(null);
-        }
-      },
-      [
-        isAdmin,
-        showAdminPanel,
-        handleAdminMouseMove,
-        isDragging,
-        lastMousePos,
-        zoom,
-        screenToGrid,
-        dimensions,
-      ],
-    );
+const handleMouseMove = useCallback(
+  (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Admin handling prioritaire
+    if (isAdmin && showAdminPanel) {
+      handleAdminMouseMove(e);
+      return;
+    }
+
+    // Gestion du drag
+    if (isDragging) {
+      const deltaX = e.clientX - lastMousePos.x; // client coords are CSS px
+      const deltaY = e.clientY - lastMousePos.y;
+      setHasDragged(true);
+
+      // pan is in CSS pixels — on l'incrémente directement par le delta de la souris
+      panRef.current = {
+        x: panRef.current.x + deltaX,
+        y: panRef.current.y + deltaY,
+      };
+      setPan({ x: panRef.current.x, y: panRef.current.y });
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+
+      needsRedrawRef.current.bg = true;
+      needsRedrawRef.current.overlay = true;
+      return;
+    }
+
+    // On alimente le batcher **à chaque move** (même si on throttlera ensuite)
+    pendingPointerRef.current = { x: e.clientX, y: e.clientY };
+  },
+  [
+    isAdmin,
+    showAdminPanel,
+    handleAdminMouseMove,
+    isDragging,
+    lastMousePos,
+  ],
+);
+
 
     const handleMouseUp = useCallback(
       (e: React.MouseEvent<HTMLCanvasElement>) => {
         setIsDragging(false);
-        if (!hasDragged && !showAdminPanel) {
+        if (!hasDragged && !showAdminPanel && !shouldDisableMouseMove) {
           const gridPos = screenToGrid(e.clientX, e.clientY);
           if (
             gridPos.x >= 0 &&
@@ -980,20 +1383,32 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             gridPos.y >= 0 &&
             gridPos.y < dimensions.height
           ) {
-            setHoverPixel(gridPos);
+            hoverRef.current = gridPos;
+            needsRedrawRef.current.overlay = true;
           } else {
-            setHoverPixel(null);
+            hoverRef.current = null;
+            needsRedrawRef.current.overlay = true;
           }
         }
       },
-      [hasDragged, showAdminPanel, screenToGrid, dimensions],
+      [
+        hasDragged,
+        showAdminPanel,
+        shouldDisableMouseMove,
+        screenToGrid,
+        dimensions,
+      ],
     );
 
     const handleMouseLeave = useCallback(() => {
       setIsDragging(false);
       setHasDragged(false);
-      setHoverPixel(null);
-      if (isAdmin && showAdminPanel) setAdminPreview(null);
+      hoverRef.current = null;
+      pendingPointerRef.current = null;
+      if (isAdmin && showAdminPanel) {
+        setAdminPreview(null);
+      }
+      needsRedrawRef.current.overlay = true;
     }, [isAdmin, showAdminPanel]);
 
     // touch handlers
@@ -1037,15 +1452,19 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
           const deltaY = clientY - lastMousePos.y;
           if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
             setHasDragged(true);
-            setPan((prev) => ({
-              x: prev.x + deltaX / zoom,
-              y: prev.y + deltaY / zoom,
-            }));
+            panRef.current = {
+              x: panRef.current.x + deltaX,
+              y: panRef.current.y + deltaY,
+            };
+            setPan({ x: panRef.current.x, y: panRef.current.y });
             setLastMousePos({ x: clientX, y: clientY });
+
+            needsRedrawRef.current.bg = true;
+            needsRedrawRef.current.overlay = true;
           }
         }
       },
-      [isDragging, lastMousePos, zoom],
+      [isDragging, lastMousePos],
     );
 
     const handleTouchEnd = useCallback(() => {
@@ -1057,7 +1476,9 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (isMobile || hasDragged || showAdminPanel) return;
         if (!isWSConnected()) {
-          console.warn("WebSocket non connecté pour le placement du pixel");
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("WebSocket non connecté pour le placement du pixel");
+          }
           return;
         }
         const gridPos = screenToGrid(e.clientX, e.clientY);
@@ -1073,12 +1494,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             color: selectedColor,
           });
           setShowValidation(true);
-          console.log(
-            "[PixelCanvas] (FR) Pixel sélectionné pour validation :",
-            gridPos.x,
-            gridPos.y,
-            selectedColor,
-          );
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "[PixelCanvas] (FR) Pixel sélectionné pour validation :",
+              gridPos.x,
+              gridPos.y,
+              selectedColor,
+            );
+          }
         }
       },
       [
@@ -1095,7 +1518,9 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     const handleValidatePixel = useCallback(
       (x: number, y: number, color: string) => {
         if (!isWSConnected()) {
-          console.warn("WebSocket non connecté pour la validation du pixel");
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("WebSocket non connecté pour la validation du pixel");
+          }
           setShowValidation(false);
           setValidationPixel(null);
           return;
@@ -1121,19 +1546,31 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               dimensions.width * dimensions.height,
             ).fill("#FFFFFF");
           const index = y * dimensions.width + x;
+          const colorUpper = color.toUpperCase();
           if (index >= 0 && index < gridRef.current.length) {
-            gridRef.current[index] = color.toUpperCase();
+            gridRef.current[index] = colorUpper;
+
+            // Mise à jour du buffer
+            if (bufferRef.current) {
+              bufferRef.current[index] = hexToRGBAUint32(colorUpper);
+              offscreenDirtyRef.current = true;
+            }
+            needsRedrawRef.current.bg = true;
           }
-          console.log(
-            "[PixelCanvas] (FR) Pixel validé et mis à jour localement :",
-            x,
-            y,
-            color,
-          );
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "[PixelCanvas] (FR) Pixel validé et mis à jour localement :",
+              x,
+              y,
+              color,
+            );
+          }
         } else {
-          console.warn(
-            "Échec de l'envoi du placement du pixel - mis en attente pour retry",
-          );
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(
+              "Échec de l'envoi du placement du pixel - mis en attente pour retry",
+            );
+          }
         }
 
         setShowValidation(false);
@@ -1165,14 +1602,14 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     return (
       <div className="relative w-full h-full flex items-center justify-center">
         <div className="relative flex items-center justify-center">
+          {/* Background Canvas */}
           <canvas
-            ref={canvasRef}
+            ref={bgCanvasRef}
             style={{
               display: "block",
               width: `${canvasDisplaySize.width}px`,
               height: `${canvasDisplaySize.height}px`,
               imageRendering: "pixelated",
-              cursor: getCursorStyle,
               touchAction: "none",
               msTouchAction: "none",
               WebkitTapHighlightColor: "transparent",
@@ -1182,6 +1619,27 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
               transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
               opacity: isGridLoaded ? 1 : 0.7,
             }}
+            aria-label="Zone de dessin pixel-art collaborative"
+            role="application"
+            className="hover:shadow-2xl transition-all duration-300 ease-out"
+          />
+          {/* Overlay Canvas */}
+          <canvas
+            ref={overlayCanvasRef}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              display: "block",
+              width: `${canvasDisplaySize.width}px`,
+              height: `${canvasDisplaySize.height}px`,
+              imageRendering: "pixelated",
+              cursor: getCursorStyle,
+              touchAction: "none",
+              msTouchAction: "none",
+              WebkitTapHighlightColor: "transparent",
+              pointerEvents: "auto",
+            }}
             onClick={placePixel}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -1190,9 +1648,6 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            aria-label="Zone de dessin pixel-art collaborative"
-            role="application"
-            className="hover:shadow-2xl transition-all duration-300 ease-out"
           />
           {/* WebSocket connection status indicator */}
           <div

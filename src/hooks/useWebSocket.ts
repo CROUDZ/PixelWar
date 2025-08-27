@@ -128,6 +128,11 @@ export function usePixelWebSocket(userId: string | null) {
       if (data.type === "init") {
         const width = Number(data.width) || 100;
         const height = Number(data.height) || 100;
+        console.log(
+          "[usePixelWebSocket] (FR) Dimensions de la grille :",
+          width,
+          height,
+        );
         setGridDimensions({ width, height });
         setIsGridLoaded(true);
         setLastSyncTimestamp(Date.now());

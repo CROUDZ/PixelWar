@@ -43,9 +43,9 @@ export default async function handler(
     const GRID_KEY = process.env.GRID_KEY || "pixel-grid";
     const QUEUE_KEY = process.env.QUEUE_KEY || "pixel-queue";
     const BINARY_KEY = "pixelwar:canvas:v1"; // Clé pour la persistance binaire
-    const WIDTH = Number(process.env.GRID_WIDTH || 100);
-    const HEIGHT = Number(process.env.GRID_HEIGHT || 100);
-    const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFF";
+    const WIDTH = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
+    const HEIGHT = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
+    const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFE";
 
     console.log(
       `[ADMIN] (FR) Début de la suppression du canvas par l'utilisateur ${session.user.id} (${session.user.email})`,
