@@ -120,99 +120,145 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         {/* Modal */}
         <m.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6"
+          className="relative max-w-lg w-full mx-4"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">Placer un Pixel</h3>
-            <button
-              onClick={onCancel}
-              className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-            >
-              <X size={20} />
-            </button>
-          </div>
+          {/* Glass morphism background */}
+          <div className="absolute inset-0 bg-glass-primary backdrop-blur-lg rounded-2xl border border-glass-200 shadow-glass-lg"></div>
 
-          {/* Cooldown warning */}
-          {remainingTime > 0 && (
-            <div className="mb-4 p-3 bg-orange-100 dark:bg-orange-900 rounded-lg text-sm text-orange-700 dark:text-orange-300">
-              Cooldown actif : {formatTime(remainingTime)}
-            </div>
-          )}
-
-          {/* Inputs */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          {/* Content */}
+          <div className="relative p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Position X
-                </label>
-                <input
-                  type="number"
-                  value={x}
-                  onChange={(e) => setX(Number(e.target.value))}
-                  disabled={!isEventAccessible()}
-                  className="w-full border-gray-500 px-3 py-2 border rounded-lg text-center font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:outline-none focus:ring-0"
-                />
+                <h3 className="text-xl font-bold text-text-primary">
+                  Placer un Pixel
+                </h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  Choisissez votre position et couleur
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Position Y
+              <button
+                onClick={onCancel}
+                className="p-2 rounded-xl bg-surface-hover hover:bg-surface-tertiary text-text-secondary hover:text-text-primary transition-colors duration-fast"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Cooldown warning */}
+            {remainingTime > 0 && (
+              <m.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse-soft"></div>
+                  <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                    Cooldown actif : {formatTime(remainingTime)}
+                  </p>
+                </div>
+              </m.div>
+            )}
+
+            {/* Inputs */}
+            <div className="space-y-5">
+              {/* Position inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-text-primary">
+                    Position X
+                  </label>
+                  <input
+                    type="number"
+                    value={x}
+                    onChange={(e) => setX(Number(e.target.value))}
+                    disabled={!isEventAccessible()}
+                    className="w-full px-4 py-3 bg-surface-primary border border-border-primary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-fast font-mono text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-text-primary">
+                    Position Y
+                  </label>
+                  <input
+                    type="number"
+                    value={y}
+                    onChange={(e) => setY(Number(e.target.value))}
+                    disabled={!isEventAccessible()}
+                    className="w-full px-4 py-3 bg-surface-primary border border-border-primary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-fast font-mono text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Color selector */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-text-primary">
+                  Couleur
                 </label>
-                <input
-                  type="number"
-                  value={y}
-                  onChange={(e) => setY(Number(e.target.value))}
-                  disabled={!isEventAccessible()}
-                  className="w-full px-3 py-2 border-gray-500  border focus:outline-none rounded-lg text-center font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
-                />
+                <div className="bg-surface-primary border border-border-primary rounded-xl p-3">
+                  <PixelSelector
+                    onSelect={(newColor) => setColor(newColor)}
+                    initial={color}
+                  />
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Couleur</label>
-              <PixelSelector
-                onSelect={(newColor) => setColor(newColor)}
-                initial={color}
-              />
-            </div>
-          </div>
 
-          {/* Preview */}
-          <div className="mt-4 flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-lg border"
-              style={{ backgroundColor: color }}
-            ></div>
-            <div>
-              <p className="text-sm">
-                Position: ({x}, {y})
-              </p>
-              <p className="text-sm">Couleur: {color.toUpperCase()}</p>
-            </div>
-          </div>
+            {/* Preview */}
+            <m.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="mt-6 p-4 bg-surface-secondary rounded-xl border border-border-secondary"
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-xl border-2 border-border-primary shadow-md"
+                  style={{ backgroundColor: color }}
+                ></div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium text-text-primary">
+                    Position:{" "}
+                    <span className="font-mono text-accent">
+                      ({x}, {y})
+                    </span>
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Couleur:{" "}
+                    <span className="font-mono">{color.toUpperCase()}</span>
+                  </p>
+                </div>
+              </div>
+            </m.div>
 
-          {/* Actions */}
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleValidate}
-              disabled={status === "loading"}
-              className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-            >
-              Valider
-            </button>
+            {/* Actions */}
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={onCancel}
+                className="flex-1 px-6 py-3 bg-surface-secondary hover:bg-surface-tertiary text-text-secondary hover:text-text-primary rounded-xl font-medium transition-all duration-fast border border-border-primary hover:border-border-secondary"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleValidate}
+                disabled={status === "loading" || !isEventAccessible()}
+                className="flex-1 px-6 py-3 bg-accent hover:bg-accent-hover active:bg-accent-active text-white dark:text-gray-800 rounded-xl 
+                font-semibold transition-all duration-fast shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed 
+                active:scale-95"
+              >
+                {status === "loading" ? "Chargement..." : "Valider"}
+              </button>
+            </div>
           </div>
         </m.div>
       </div>

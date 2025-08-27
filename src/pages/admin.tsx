@@ -3,6 +3,30 @@ import Link from "next/link";
 import { getSession, useSession } from "next-auth/react";
 import { GetServerSideProps } from "next";
 import dynamic from "next/dynamic";
+import { m } from "framer-motion";
+import {
+  Users,
+  Zap,
+  UserX,
+  Calendar,
+  AlertTriangle,
+  Trash2,
+  ArrowLeft,
+  UserPlus,
+  UserMinus,
+  Ban,
+  CheckCircle,
+  XCircle,
+  Search,
+  Loader2,
+  Crown,
+  Clock,
+  Palette,
+  Database,
+  Settings,
+  Play,
+  Pause
+} from "lucide-react";
 import { useEventMode } from "@/context/EventMode"; // Import EventMode context
 
 const Header = dynamic(() => import("../components/header/Header"), {
@@ -77,11 +101,18 @@ const ClearCanvasButton: React.FC = () => {
 
   if (showConfirmation) {
     return (
-      <div className="space-y-4">
-        <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-4">
-            🚨 CONFIRMATION FINALE REQUISE
-          </h3>
+      <m.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4"
+      >
+        <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
+            <h3 className="text-lg font-bold text-red-700 dark:text-red-300">
+              CONFIRMATION FINALE REQUISE
+            </h3>
+          </div>
           <p className="text-red-700 dark:text-red-300 mb-4">
             Pour confirmer que vous voulez vraiment supprimer TOUTE la toile et
             son historique, tapez exactement <strong>"SUPPRIMER TOUT"</strong>{" "}
@@ -92,63 +123,96 @@ const ClearCanvasButton: React.FC = () => {
             value={confirmationText}
             onChange={(e) => setConfirmationText(e.target.value)}
             placeholder="Tapez SUPPRIMER TOUT"
-            className="w-full px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-red-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            className="w-full px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-red-400 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
           />
         </div>
 
         <div className="flex gap-4">
-          <button
+          <m.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleClearCanvas}
             disabled={isClearing || confirmationText !== "SUPPRIMER TOUT"}
-            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors"
+            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
           >
-            {isClearing
-              ? "🔄 Nettoyage en cours..."
-              : "🗑️ CONFIRMER LA SUPPRESSION"}
-          </button>
-          <button
+            {isClearing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Nettoyage en cours...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4" />
+                CONFIRMER LA SUPPRESSION
+              </>
+            )}
+          </m.button>
+          <m.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={cancelClear}
             disabled={isClearing}
             className="px-6 py-3 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white font-semibold rounded-xl transition-colors"
           >
             Annuler
-          </button>
+          </m.button>
         </div>
 
         {clearMessage && (
-          <div
+          <m.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             className={`p-4 rounded-xl border ${
               clearMessage.includes("✅")
                 ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
                 : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
             }`}
           >
-            {clearMessage}
-          </div>
+            <div className="flex items-center gap-2">
+              {clearMessage.includes("✅") ? (
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              ) : (
+                <XCircle className="w-4 h-4 flex-shrink-0" />
+              )}
+              {clearMessage}
+            </div>
+          </m.div>
         )}
-      </div>
+      </m.div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <button
+      <m.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={() => setShowConfirmation(true)}
-        className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors border-2 border-red-500 shadow-lg"
+        className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors border-2 border-red-500 shadow-lg flex items-center justify-center gap-2"
       >
-        🗑️ NETTOYER COMPLÈTEMENT LA TOILE
-      </button>
+        <Trash2 className="w-5 h-5" />
+        NETTOYER COMPLÈTEMENT LA TOILE
+      </m.button>
 
       {clearMessage && (
-        <div
+        <m.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           className={`p-4 rounded-xl border ${
             clearMessage.includes("✅")
               ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
               : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
           }`}
         >
-          {clearMessage}
-        </div>
+          <div className="flex items-center gap-2">
+            {clearMessage.includes("✅") ? (
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            ) : (
+              <XCircle className="w-4 h-4 flex-shrink-0" />
+            )}
+            {clearMessage}
+          </div>
+        </m.div>
       )}
     </div>
   );
@@ -255,12 +319,16 @@ const AdminPage: React.FC = () => {
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900 flex items-center justify-center">
-        <div className="glass-panel rounded-3xl p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
+        <m.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg"
+        >
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto" />
           <p className="mt-4 text-center text-gray-600 dark:text-gray-400">
             Chargement...
           </p>
-        </div>
+        </m.div>
       </div>
     );
   }
@@ -276,285 +344,269 @@ const AdminPage: React.FC = () => {
 
   // Page admin principale
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-900 dark:to-gray-800">
       <Header />
 
       <main className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* En-tête de l'admin */}
-        <div className="glass-panel rounded-3xl p-8">
+        {/* En-tête de l'admin avec breadcrumb */}
+        <m.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-xl"
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Administration PixelWar
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                <span>PixelWar</span>
+                <span>/</span>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Administration</span>
+              </div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                Centre d'Administration
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Tableau de bord administrateur • Gestion et surveillance
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                Tableau de bord administrateur • Gestion et surveillance en temps réel
               </p>
             </div>
-            <Link
-              href="/"
-              className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white inline-flex items-center gap-2 w-fit"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <m.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/"
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300 inline-flex items-center gap-3 shadow-lg hover:shadow-xl"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              Retour au Jeu
-            </Link>
+                <ArrowLeft className="w-5 h-5" />
+                Retour au Jeu
+              </Link>
+            </m.div>
           </div>
+        </m.div>
+
+        {/* Statistiques améliorées */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <m.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ y: -5 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    Live
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Serveur en ligne
+                  </p>
+                </div>
+              </div>
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+          </m.div>
+
+          <m.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ y: -5 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Palette className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    10k
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Pixels placés
+                  </p>
+                </div>
+              </div>
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            </div>
+          </m.div>
         </div>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ∞
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Utilisateurs actifs
-                </p>
-              </div>
+        {/* Gestion des administrateurs améliorée */}
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-xl"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Crown className="w-7 h-7 text-white" />
             </div>
-          </div>
-
-          <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Live
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Serveur en ligne
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  10k
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pixels placés
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Gestion des administrateurs */}
-        <div className="glass-panel rounded-3xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Gestion des Administrateurs
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Ajouter un nouvel administrateur par email
+              <p className="text-gray-600 dark:text-gray-400">
+                Ajouter ou retirer des privilèges administrateur
               </p>
+            </div>
+            <div className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-sm font-medium">
+              Niveau Élevé
             </div>
           </div>
 
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <svg
-                className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-              <div>
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                  Important
-                </p>
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-8">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                  Information Importante
+                </h3>
+                <p className="text-amber-700 dark:text-amber-400">
                   L'utilisateur doit se connecter au moins une fois pour que son
-                  compte soit créé dans la base de données.
+                  compte soit créé dans la base de données avant de pouvoir lui attribuer des privilèges.
                 </p>
               </div>
             </div>
           </div>
 
-          <form onSubmit={(e) => handleAdmin(e, "ADMIN")} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Adresse email du nouvel administrateur
-              </label>
-              <input
-                type="email"
-                value={admin}
-                onChange={(e) => setAdmin(e.target.value)}
-                placeholder="admin@example.com"
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
-                required
-              />
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Ajouter Admin */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <UserPlus className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Promouvoir Administrateur
+                </h3>
+              </div>
+              <form onSubmit={(e) => handleAdmin(e, "ADMIN")} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Adresse email du nouvel administrateur
+                  </label>
+                  <input
+                    type="email"
+                    value={admin}
+                    onChange={(e) => setAdmin(e.target.value)}
+                    placeholder="admin@example.com"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+
+                <m.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={isLoading || !admin.trim()}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl px-6 py-3 transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Promotion en cours...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Promouvoir Administrateur
+                    </>
+                  )}
+                </m.button>
+              </form>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading || !admin.trim()}
-              className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  Ajout en cours...
+            {/* Retirer Admin */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <UserMinus className="w-5 h-5 text-red-600" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Rétrograder Administrateur
+                </h3>
+              </div>
+              <form onSubmit={(e) => handleAdmin(e, "USER")} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Adresse email de l'administrateur à rétrograder
+                  </label>
+                  <input
+                    type="email"
+                    value={admin}
+                    onChange={(e) => setAdmin(e.target.value)}
+                    placeholder="admin@example.com"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                    required
+                  />
                 </div>
-              ) : (
-                "Ajouter Administrateur"
-              )}
-            </button>
-          </form>
 
-          <form onSubmit={(e) => handleAdmin(e, "USER")} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Adresse email de l'administrateur à retirer du rôle d'admin
-              </label>
-              <input
-                type="email"
-                value={admin}
-                onChange={(e) => setAdmin(e.target.value)}
-                placeholder="admin@example.com"
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
-                required
-              />
+                <m.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={isLoading || !admin.trim()}
+                  className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl px-6 py-3 transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Rétrogradation en cours...
+                    </>
+                  ) : (
+                    <>
+                      <UserMinus className="w-4 h-4" />
+                      Rétrograder Administrateur
+                    </>
+                  )}
+                </m.button>
+              </form>
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || !admin.trim()}
-              className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  Ajout en cours...
-                </div>
-              ) : (
-                "Retirer Administrateur"
-              )}
-            </button>
-          </form>
+          </div>
 
           {message && (
-            <div
+            <m.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
               className={`mt-6 p-4 rounded-xl border ${
                 message.includes("succès")
                   ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
                   : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
               }`}
             >
-              <p
-                className={`text-sm ${
-                  message.includes("succès")
-                    ? "text-green-700 dark:text-green-300"
-                    : "text-red-700 dark:text-red-300"
-                }`}
-              >
-                {message}
-              </p>
-            </div>
+              <div className="flex items-center gap-3">
+                {message.includes("succès") ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                )}
+                <p
+                  className={`text-sm font-medium ${
+                    message.includes("succès")
+                      ? "text-green-700 dark:text-green-300"
+                      : "text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  {message}
+                </p>
+              </div>
+            </m.div>
           )}
-        </div>
+        </m.div>
 
         {/* Gestion des utilisateurs */}
-        <div className="glass-panel rounded-3xl p-8">
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-8 shadow-lg"
+        >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18.364 5.636a9 9 0 11-12.728 0M15 11v2m-6-2v2m3-2v6"
-                />
-              </svg>
+              <UserX className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -576,152 +628,230 @@ const AdminPage: React.FC = () => {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Entrez l'ID de l'utilisateur"
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500 transition-colors"
                 required
               />
             </div>
 
             <div className="flex gap-4">
-              <button
+              <m.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={() => handleBanAction("ban")}
                 disabled={isLoading || !userId.trim()}
-                className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl px-6 py-3 transition-colors flex items-center gap-2"
               >
-                {isLoading ? "Bannissement..." : "Bannir"}
-              </button>
-              <button
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Bannissement...
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-4 h-4" />
+                    Bannir
+                  </>
+                )}
+              </m.button>
+              <m.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={() => handleBanAction("unban")}
                 disabled={isLoading || !userId.trim()}
-                className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl px-6 py-3 transition-colors flex items-center gap-2"
               >
-                {isLoading ? "Débannissement..." : "Débannir"}
-              </button>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Débannissement...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Débannir
+                  </>
+                )}
+              </m.button>
             </div>
           </form>
 
           {banMessage && (
-            <div
+            <m.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
               className={`mt-6 p-4 rounded-xl border ${
                 banMessage.includes("banni") || banMessage.includes("débanni")
                   ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
                   : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
               }`}
             >
-              <p
-                className={`text-sm ${
-                  banMessage.includes("banni") || banMessage.includes("débanni")
-                    ? "text-green-700 dark:text-green-300"
-                    : "text-red-700 dark:text-red-300"
-                }`}
-              >
-                {banMessage}
-              </p>
-            </div>
+              <div className="flex items-center gap-2">
+                {banMessage.includes("banni") || banMessage.includes("débanni") ? (
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 flex-shrink-0" />
+                )}
+                <p
+                  className={`text-sm ${
+                    banMessage.includes("banni") || banMessage.includes("débanni")
+                      ? "text-green-700 dark:text-green-300"
+                      : "text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  {banMessage}
+                </p>
+              </div>
+            </m.div>
           )}
-        </div>
+        </m.div>
 
-        {/* Gestion de l'event */}
-        <div className="glass-panel rounded-3xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3z"
-                />
-              </svg>
+        {/* Gestion de l'event améliorée */}
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-xl"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Calendar className="w-7 h-7 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Gestion de l'Event
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Gestion des Événements
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Modifier les dates et activer/désactiver l'event
+              <p className="text-gray-600 dark:text-gray-400">
+                Planifier et contrôler les événements PixelWar
               </p>
+            </div>
+            <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
+              isActive 
+                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" 
+                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500" : "bg-gray-400"}`}></div>
+              {isActive ? "Actif" : "Inactif"}
             </div>
           </div>
 
-          <form className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Date de début
-              </label>
-              <input
-                type="datetime-local"
-                value={newStartTime}
-                onChange={(e) => setNewStartTime(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
-              />
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Configuration des dates */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Configuration Temporelle
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date de début
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={newStartTime}
+                    onChange={(e) => setNewStartTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date de fin
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={newEndTime}
+                    onChange={(e) => setNewEndTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Date de fin
-              </label>
-              <input
-                type="datetime-local"
-                value={newEndTime}
-                onChange={(e) => setNewEndTime(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
+            {/* Contrôles et statut */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Contrôles d'Événement
+              </h3>
+              
+              <m.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={handleEventUpdate}
-                className={`glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white ${
+                className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-3 shadow-lg ${
                   isActive
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600"
+                    ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                    : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                 }`}
               >
-                {isActive ? "Désactiver l'Event" : "Activer l'Event"}
-              </button>
-            </div>
-          </form>
+                {isActive ? (
+                  <>
+                    <Pause className="w-5 h-5" />
+                    Désactiver l'Événement
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    Activer l'Événement
+                  </>
+                )}
+              </m.button>
 
-          <div className="mt-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <strong>État actuel :</strong> {isActive ? "Actif" : "Inactif"}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <strong>Date de début :</strong>{" "}
-              {startTime ? startTime.toString() : "Non définie"}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <strong>Date de fin :</strong>{" "}
-              {endTime ? endTime.toString() : "Non définie"}
-            </p>
+              {/* Statut détaillé */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-6">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Statut Actuel</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">État</span>
+                    <span className={`text-sm font-medium ${isActive ? "text-green-600" : "text-red-600"}`}>
+                      {isActive ? "En cours" : "Arrêté"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Début</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {startTime ? new Date(startTime).toLocaleDateString('fr-FR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : "Non défini"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Fin</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {endTime ? new Date(endTime).toLocaleDateString('fr-FR', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : "Non défini"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </m.div>
 
         {/* Nettoyage de la toile - DANGER ZONE */}
-        <div className="glass-panel rounded-3xl p-8 border-2 border-red-300 dark:border-red-700">
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-white dark:bg-gray-800 border-2 border-red-300 dark:border-red-700 rounded-3xl p-8 shadow-lg"
+        >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
+              <AlertTriangle className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-red-600 dark:text-red-400">
@@ -735,19 +865,7 @@ const AdminPage: React.FC = () => {
 
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 mb-6">
             <div className="flex items-start gap-3">
-              <svg
-                className="w-6 h-6 text-red-500 mt-0.5 flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
+              <AlertTriangle className="w-6 h-6 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
                 <h3 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
                   Attention : Action Critique
@@ -764,118 +882,141 @@ const AdminPage: React.FC = () => {
           </div>
 
           <ClearCanvasButton />
-        </div>
+        </m.div>
 
-        {/* Liste des utilisateurs */}
-        <div className="glass-panel rounded-3xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
+        {/* Liste des utilisateurs améliorée */}
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-xl"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Users className="w-7 h-7 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Liste des Utilisateurs
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Base d'Utilisateurs
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Rechercher et afficher tous les utilisateurs
+              <p className="text-gray-600 dark:text-gray-400">
+                Parcourir et rechercher dans la communauté PixelWar
               </p>
+            </div>
+            <div className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+              {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* Barre de recherche */}
-            <div>
+          <div className="space-y-6">
+            {/* Barre de recherche améliorée */}
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                <Search className="w-5 h-5 text-gray-400" />
+              </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher par ID Discord, email, username ou global_name"
-                className="w-full px-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-cyan-500"
+                placeholder="Rechercher par ID Discord, email, username ou nom global..."
+                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-lg"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
-            {/* Bouton pour charger les utilisateurs */}
-            <button
-              onClick={fetchUsers}
-              disabled={isLoading}
-              className="glass-button px-6 py-3 rounded-xl font-semibold text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  Chargement...
-                </div>
-              ) : (
-                "Charger tous les utilisateurs"
-              )}
-            </button>
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <m.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={fetchUsers}
+                disabled={isLoading}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl px-6 py-3 transition-all flex items-center justify-center gap-2 shadow-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Chargement en cours...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-5 h-5" />
+                    Charger les Utilisateurs
+                  </>
+                )}
+              </m.button>
+            </div>
 
-            {/* Liste des utilisateurs */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
-                <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-700">
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      ID Discord
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Username
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Global Name
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-t border-gray-200 dark:border-gray-700"
-                    >
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                        {user.id || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                        {user.email || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                        {user.username || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
-                        {user.global_name || "N/A"}
-                      </td>
+            {/* Tableau des utilisateurs */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        ID Discord
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Email
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Username
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Nom Global
+                      </th>
                     </tr>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredUsers.map((user, index) => (
+                      <m.tr
+                        key={user.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                       >
-                        Aucun utilisateur trouvé.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        <td className="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50">
+                          {user.id || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                          {user.email || <span className="text-gray-400 italic">Non renseigné</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                          {user.username || <span className="text-gray-400 italic">Non renseigné</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                          {user.global_name || <span className="text-gray-400 italic">Non renseigné</span>}
+                        </td>
+                      </m.tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {filteredUsers.length === 0 && !isLoading && (
+                  <div className="py-12 text-center">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">
+                      {searchQuery ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur chargé"}
+                    </p>
+                    {!searchQuery && (
+                      <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+                        Cliquez sur "Charger les Utilisateurs" pour afficher la liste
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </m.div>
       </main>
     </div>
   );

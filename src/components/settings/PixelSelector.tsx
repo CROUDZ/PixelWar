@@ -115,14 +115,14 @@ export default function PixelSelector({
   };
 
   return (
-    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md glass-panel  rounded-lg shadow-md p-4">
+    <div className="w-full bg-glass-primary backdrop-blur-lg rounded-2xl border border-glass-200 shadow-glass-lg p-4">
       <div
         ref={containerRef}
         role="listbox"
         aria-label="Palette de couleurs NES"
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className="bg-surface p-3 rounded-lg shadow-inner grid grid-cols-4 gap-3 justify-items-center"
+        className="bg-surface-secondary p-3 rounded-xl border border-border-secondary grid grid-cols-4 gap-2 justify-items-center"
       >
         {nesPalette.map((color, i) => {
           const isSelected = selected === color;
@@ -133,19 +133,19 @@ export default function PixelSelector({
             <m.button
               key={color}
               onClick={() => handleSelect(color)}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 6 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.12, delay: i * 0.01 }}
+              transition={{ duration: 0.15, delay: i * 0.02 }}
               aria-label={`Sélectionner ${color}`}
               aria-pressed={isSelected}
               style={{
                 background: color,
-                borderColor: isSelected ? textColor : "rgba(0,0,0,0.12)",
+                borderColor: isSelected ? textColor : "rgba(0,0,0,0.15)",
               }}
-              className={`w-9 h-9 md:w-10 md:h-10 rounded shadow-sm border-2 focus:outline-none transition-transform flex items-center justify-center ${
-                isFocused ? "ring-2 ring-offset-1 ring-blue-400" : ""
+              className={`w-10 h-10 rounded-lg shadow-sm border-1 focus:outline-none transition-all duration-fast flex items-center justify-center hover:shadow-md ${
+                isFocused ? "ring-2 ring-offset-2 ring-accent" : ""
               }`}
               onFocus={() => setFocusIndex(i)}
             >
@@ -154,14 +154,18 @@ export default function PixelSelector({
               <AnimatePresence>
                 {isSelected && (
                   <m.span
-                    initial={{ scale: 0.8, opacity: 0 }}
+                    initial={{ scale: 0.7, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
+                    exit={{ scale: 0.7, opacity: 0 }}
                     className="flex items-center justify-center"
                     style={{ color: textColor }}
                   >
                     <div
-                      className={`w-2 h-2 rounded-full ${blackCursor.includes(color) ? "bg-black/90 " : "bg-gray-300"}`}
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        blackCursor.includes(color)
+                          ? "bg-black/90"
+                          : "bg-white/90"
+                      } shadow-sm`}
                     />
                   </m.span>
                 )}
@@ -170,8 +174,8 @@ export default function PixelSelector({
           );
         })}
       </div>
-      <div className="border-t border-gray-400 border-lg my-4"></div>
-      <div className="mt-3 text-xs text-muted-foreground">
+      <div className="border-t border-border-primary my-3"></div>
+      <div className="text-xs text-text-muted text-center">
         Raccourcis clavier : flèches pour naviguer • Entrée pour sélectionner
       </div>
     </div>

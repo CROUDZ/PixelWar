@@ -1,4 +1,5 @@
 import React from "react";
+import { m } from "framer-motion";
 
 interface LoadingProps {
   message?: string;
@@ -21,33 +22,27 @@ const Loading: React.FC<LoadingProps> = ({
     <div className="relative">
       {/* Anneau externe */}
       <div
-        className={`${sizeClasses[size]} border-4 border-gray-200 dark:border-gray-700 rounded-full`}
+        className={`${sizeClasses[size]} border-4 border-border-primary rounded-full`}
       ></div>
       {/* Anneau rotatif */}
       <div
-        className={`${sizeClasses[size]} border-4 border-transparent border-t-cyan-500 rounded-full animate-spin absolute top-0 left-0`}
+        className={`${sizeClasses[size]} border-4 border-transparent border-t-accent rounded-full animate-spin absolute top-0 left-0`}
       ></div>
-      {/* Points lumineux */}
-      <div
-        className={`${sizeClasses[size]} absolute top-0 left-0 flex items-center justify-center`}
-      >
-        <div className="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></div>
-      </div>
     </div>
   );
 
   const LoadingDots = () => (
     <div className="flex space-x-1">
       <div
-        className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"
+        className="w-2 h-2 bg-accent rounded-full animate-bounce"
         style={{ animationDelay: "0ms" }}
       ></div>
       <div
-        className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"
+        className="w-2 h-2 bg-accent rounded-full animate-bounce"
         style={{ animationDelay: "150ms" }}
       ></div>
       <div
-        className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"
+        className="w-2 h-2 bg-accent rounded-full animate-bounce"
         style={{ animationDelay: "300ms" }}
       ></div>
     </div>
@@ -58,13 +53,13 @@ const Loading: React.FC<LoadingProps> = ({
       <div className="flex items-center gap-3 p-4">
         <div className="relative">
           <div
-            className={`${sizeClasses.sm} border-2 border-gray-200 dark:border-gray-700 rounded-full`}
+            className={`${sizeClasses.sm} border-2 border-border-primary rounded-full`}
           ></div>
           <div
-            className={`${sizeClasses.sm} border-2 border-transparent border-t-cyan-500 rounded-full animate-spin absolute top-0 left-0`}
+            className={`${sizeClasses.sm} border-2 border-transparent border-t-accent rounded-full animate-spin absolute top-0 left-0`}
           ></div>
         </div>
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <span className="text-sm text-text-secondary">
           {message}
         </span>
       </div>
@@ -74,10 +69,10 @@ const Loading: React.FC<LoadingProps> = ({
   if (variant === "overlay") {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="glass-panel rounded-3xl p-8 flex flex-col items-center gap-6 max-w-sm mx-4">
+        <div className="bg-surface-primary rounded-xl p-6 flex flex-col items-center gap-4 max-w-sm mx-4 border border-border-primary shadow-lg">
           <LoadingSpinner />
           <div className="text-center">
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <p className="text-base font-semibold text-text-primary mb-2">
               {message}
             </p>
             <LoadingDots />
@@ -89,20 +84,11 @@ const Loading: React.FC<LoadingProps> = ({
 
   // variant === "page" (par défaut)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900 flex items-center justify-center p-6">
-      {/* Arrière-plan décoratif */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full blur-3xl animate-float"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-cyan-500/20 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "3s" }}
-        ></div>
-      </div>
-
-      <div className="relative z-10 text-center">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="text-center">
         {/* Logo ou icône */}
         <div className="mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 animate-glow">
+          <div className="w-20 h-20 bg-accent rounded-xl flex items-center justify-center mx-auto mb-4">
             <svg
               className="w-10 h-10 text-white"
               fill="none"
@@ -117,7 +103,7 @@ const Loading: React.FC<LoadingProps> = ({
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gradient">PixelWar</h1>
+          <h1 className="text-2xl font-bold text-accent">PixelWar</h1>
         </div>
 
         {/* Spinner principal */}
@@ -127,10 +113,10 @@ const Loading: React.FC<LoadingProps> = ({
 
         {/* Message */}
         <div className="mb-6">
-          <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <p className="text-xl font-semibold text-text-primary mb-2">
             {message}
           </p>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-text-secondary">
             Préparation de votre expérience pixel...
           </p>
         </div>
@@ -138,33 +124,23 @@ const Loading: React.FC<LoadingProps> = ({
         {/* Dots animés */}
         <LoadingDots />
 
-        {/* Barre de progression stylisée */}
+        {/* Barre de progression */}
         <div className="mt-8 max-w-xs mx-auto">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-pulse"
-              style={{
-                width: "100%",
-                animation: "loading-bar 2s ease-in-out infinite",
+          <div className="w-full bg-surface-secondary rounded-full h-2 overflow-hidden">
+            <m.div
+              className="h-full bg-accent rounded-full"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{
+                duration: 2,
+                ease: "easeInOut",
+                repeat: Infinity,
+                repeatType: "reverse"
               }}
-            ></div>
+            />
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes loading-bar {
-          0% {
-            transform: translateX(-100%);
-          }
-          50% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { subscribeWS, getWS, isWSConnected } from "@/lib/ws";
 
-export default function PixelInformations() {
+export default function PixelCount() {
   const [count, setCount] = useState<number>(0);
   const [connected, setConnected] = useState<boolean>(false);
   const [rate, setRate] = useState<number>(0);

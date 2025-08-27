@@ -4,13 +4,15 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { m, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
-import type { PixelCanvasHandle } from "@/components/pixel/PixelCanvas"; // ajuste si nécessaire
+import { X, Settings, BarChart3 } from "lucide-react";
+import type { PixelCanvasHandle } from "@/components/pixel/PixelCanvas";
 import Header from "@/components/header/Header";
 import LeftSidebar from "@/components/layout/LeftSidebar";
 import Footer from "@/components/layout/Footer";
-import NotificationContainer from "@/components/NotificationContainer";
 import PixelCanvas from "@/components/pixel/PixelCanvas";
+
 
 const OverlayImage = dynamic(() => import("@/components/pixel/OverlayImage"), {
   ssr: false,
@@ -59,8 +61,7 @@ interface CanvasNavState {
 
 const HomePage: React.FC = () => {
   const { data: session } = useSession();
-  const [showOverlayControls, setShowOverlayControls] =
-    useState<boolean>(false);
+  const [showOverlayControls, setShowOverlayControls] = useState<boolean>(false);
   const [showPixelInfos, setShowPixelInfos] = useState<boolean>(false);
   const [showNavInfo, setShowNavInfo] = useState<boolean>(false);
   const [canvasNavState, setCanvasNavState] = useState<CanvasNavState>({
@@ -129,44 +130,48 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const closeAllOverlays = () => {
+    setShowOverlayControls(false);
+    setShowPixelInfos(false);
+    setShowNavInfo(false);
+    setShowPixelCount(false);
+    setShowAdminPanel(false);
+  };
+
   if (session?.user?.banned) {
     console.log(
       "[HomePage] (FR) Utilisateur banni, affichage du composant Banned",
     );
-    return <Banned reason="Violation des règles" duration="Indéfinie" />;
+    return <Banned />;
   }
 
-  console.log("[HomePage] (FR) Rendu avec session :", session);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-900 dark:to-gray-800">
       <Header />
 
       <main
         className="relative z-10 flex flex-col"
         style={{ minHeight: "calc(100vh - 96px)" }}
       >
-        {/* Overlay sombre pour mobile quand un panneau est ouvert */}
-        {(showOverlayControls ||
-          showPixelInfos ||
-          showNavInfo ||
-          showPixelCount ||
-          showAdminPanel) && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
-            onClick={() => {
-              setShowOverlayControls(false);
-              setShowPixelInfos(false);
-              setShowNavInfo(false);
-              setShowPixelCount(false);
-              setShowAdminPanel(false);
-              console.log("[HomePage] (FR) Overlay mobile fermé par clic");
-            }}
-          />
-        )}
+        {/* Mobile overlay backdrop */}
+        <AnimatePresence>
+          {(showOverlayControls ||
+            showPixelInfos ||
+            showNavInfo ||
+            showPixelCount ||
+            showAdminPanel) && (
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
+              onClick={closeAllOverlays}
+            />
+          )}
+        </AnimatePresence>
 
         <div className="flex w-full justify-center items-center">
-          {/* Barre latérale gauche : mobile -> barre flottante en bas, md+ -> verticale fixe */}
+          {/* Left Sidebar */}
           <div className="z-50 pointer-events-auto">
             <div className="w-full md:w-20">
               <LeftSidebar
@@ -175,80 +180,78 @@ const HomePage: React.FC = () => {
                 showNavInfo={showNavInfo}
                 showPixelCount={showPixelCount}
                 showAdminPanel={showAdminPanel}
-                onToggleOverlayControls={() => {
-                  setShowOverlayControls((s) => !s);
-                  console.log(
-                    "[HomePage] (FR) Toggle overlay controls :",
-                    !showOverlayControls,
-                  );
-                }}
-                onTogglePixelInfos={() => {
-                  setShowPixelInfos((s) => !s);
-                  console.log(
-                    "[HomePage] (FR) Toggle pixel infos :",
-                    !showPixelInfos,
-                  );
-                }}
-                onToggleNavInfo={() => {
-                  setShowNavInfo((s) => !s);
-                  console.log(
-                    "[HomePage] (FR) Toggle navigation info :",
-                    !showNavInfo,
-                  );
-                }}
-                onTogglePixelCount={() => {
-                  setShowPixelCount((s) => !s);
-                  console.log(
-                    "[HomePage] (FR) Toggle pixel count :",
-                    !showPixelCount,
-                  );
-                }}
-                onToggleAdminPanel={() => {
-                  setShowAdminPanel((s) => !s);
-                  console.log(
-                    "[HomePage] (FR) Toggle admin panel :",
-                    !showAdminPanel,
-                  );
-                }}
+                onToggleOverlayControls={() => setShowOverlayControls((s) => !s)}
+                onTogglePixelInfos={() => setShowPixelInfos((s) => !s)}
+                onToggleNavInfo={() => setShowNavInfo((s) => !s)}
+                onTogglePixelCount={() => setShowPixelCount((s) => !s)}
+                onToggleAdminPanel={() => setShowAdminPanel((s) => !s)}
                 isAdmin={session?.user?.role === "ADMIN"}
                 A2F={session?.user?.twoFA ?? false} // Ajout de la vérification A2F avec une valeur par défaut
               />
             </div>
           </div>
 
-          {/* Main area */}
+          {/* Main Content Area */}
           <div className="flex-1 flex justify-center items-center w-full px-4 md:px-12 py-6">
-            {/* Side panel (left) - slide-in on md+ */}
-            {showOverlayControls && (
-              <aside
-                className=" bg-white/80 w-80 dark:bg-gray-900/80 backdrop-blur-xl border-r
-               border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform 
-              duration-300 z-40 rounded-lg"
-              >
-                <div className="p-4 md:p-6">
-                  <OverlayControlsImage
-                    src={src}
-                    show={show}
-                    opacity={opacity}
-                    transform={transform}
-                    onToggleShow={setShow}
-                    onChangeSrc={(s) => setSrc(s)}
-                    onChangeOpacity={setOpacity}
-                    onChangeTransform={(patch) =>
-                      setTransform((t) => ({ ...t, ...patch }))
-                    }
-                    onRemove={() => {
-                      setSrc("");
-                      setShow(false);
-                    }}
-                    onClose={() => setShowOverlayControls(false)}
-                  />
-                </div>
-              </aside>
-            )}
+            {/* Left Side Panel */}
+            <AnimatePresence>
+              {showOverlayControls && (
+                <m.aside
+                  initial={{ x: "-100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: "-100%", opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 overflow-y-auto shadow-2xl z-40 rounded-2xl mr-4"
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                          <Settings className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            Contrôles Overlay
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Gestion des images
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowOverlayControls(false)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      </button>
+                    </div>
+                    <OverlayControlsImage
+                      src={src}
+                      show={show}
+                      opacity={opacity}
+                      transform={transform}
+                      onToggleShow={setShow}
+                      onChangeSrc={(s) => setSrc(s)}
+                      onChangeOpacity={setOpacity}
+                      onChangeTransform={(patch) =>
+                        setTransform((t) => ({ ...t, ...patch }))
+                      }
+                      onRemove={() => {
+                        setSrc("");
+                        setShow(false);
+                      }}
+                      onClose={() => setShowOverlayControls(false)}
+                    />
+                  </div>
+                </m.aside>
+              )}
+            </AnimatePresence>
 
-            {/* Canvas wrapper: responsive and centered. Use aspectRatio to avoid deformation */}
-            <section className="flex flex-1 items-center justify-center w-full">
+            {/* Canvas Section */}
+            <m.section
+              className="flex-1 flex items-center justify-center w-full"
+              layout
+            >
               <div
                 ref={canvasContainerRef}
                 className="relative flex items-center justify-center"
@@ -259,27 +262,14 @@ const HomePage: React.FC = () => {
                 }}
               >
                 <div className="relative group w-full h-full">
-                  <div
-                    className="absolute inset-0 rounded-3xl blur-xl opacity-30"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12), rgba(236,72,153,0.12))",
-                    }}
+                  <PixelCanvas
+                    ref={canvasApiRef}
+                    onStateChange={setCanvasNavState}
+                    showAdminPanelProp={showAdminPanel}
+                    adminSelectedSizeProp={adminSelectedSize}
+                    adminColorProp={adminColor}
+                    isAdminSelectingProp={isAdminSelecting}
                   />
-
-                  <div className="relative bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl rounded-2xl p-3 border shadow-2xl w-full h-full flex items-center justify-center">
-                    {/* PixelCanvas should scale to the container. Laisser le composant gérer le rendu pixel-perfect mais lui fournir la taille du container si besoin. */}
-                    <div className="w-full h-full flex items-center justify-center">
-                      <PixelCanvas
-                        ref={canvasApiRef}
-                        onStateChange={setCanvasNavState}
-                        showAdminPanelProp={showAdminPanel}
-                        adminSelectedSizeProp={adminSelectedSize}
-                        adminColorProp={adminColor}
-                        isAdminSelectingProp={isAdminSelecting}
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <OverlayImage
@@ -294,90 +284,120 @@ const HomePage: React.FC = () => {
                   pixelSize={canvasApiRef.current?.getPixelSize() || 1}
                 />
               </div>
-            </section>
+            </m.section>
 
-            {/* Right side drawer (md+) */}
-            {(showNavInfo || showPixelCount || showAdminPanel) && (
-              <aside className="hidden md:block bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-l border-gray-200/60 dark:border-gray-700/60 overflow-y-auto shadow-2xl transition-transform duration-300 z-40 rounded-lg">
-                <div className="sticky top-0 bg-white/90 dark:bg-gray-900/90 p-4 md:p-6 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg md:text-xl font-bold">
-                        Stats & Contrôles
-                      </h2>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Performances en temps réel
-                      </p>
+            {/* Right Side Panel */}
+            <AnimatePresence>
+              {(showNavInfo || showPixelCount || showAdminPanel) && (
+                <m.aside
+                  initial={{ x: "100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: "100%", opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="hidden md:block bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-l border-gray-200/50 dark:border-gray-700/50 overflow-y-auto shadow-2xl z-40 rounded-2xl ml-4"
+                >
+                  <div className="sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                            Stats & Contrôles
+                          </h2>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Performances en temps réel
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={closeAllOverlays}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors md:hidden"
+                      >
+                        <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setShowPixelInfos(false);
-                        setShowNavInfo(false);
-                        setShowPixelCount(false);
-                        setShowAdminPanel(false);
-                      }}
-                      className="md:hidden p-2 rounded-lg"
-                    >
-                      ✕
-                    </button>
                   </div>
-                </div>
 
-                <div className="p-4 md:p-6">
-                  {showNavInfo && (
-                    <div className="mb-6">
-                      <NavigationOverlay
-                        isMobile={canvasNavState.isMobile}
-                        isNavigationMode={canvasNavState.isNavigationMode}
-                        showAdminPanel={canvasNavState.showAdminPanel}
-                        isAdminSelecting={canvasNavState.isAdminSelecting}
-                        adminSelectionStart={canvasNavState.adminSelectionStart}
-                        isVisible={() => setShowNavInfo(!showNavInfo)}
-                        onResetGrid={handleResetGrid}
-                        navigationDisabled={canvasNavState.navigationDisabled}
-                        onNavMove={canvasNavState.onNavMove}
-                      />
-                    </div>
-                  )}
+                  <div className="p-6 space-y-6">
+                    <AnimatePresence mode="wait">
+                      {showNavInfo && (
+                        <m.div
+                          key="nav-info"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <NavigationOverlay
+                            isMobile={canvasNavState.isMobile}
+                            isNavigationMode={canvasNavState.isNavigationMode}
+                            showAdminPanel={canvasNavState.showAdminPanel}
+                            isAdminSelecting={canvasNavState.isAdminSelecting}
+                            isVisible={() => setShowNavInfo(!showNavInfo)}
+                            onResetGrid={handleResetGrid}
+                          />
+                        </m.div>
+                      )}
 
-                  {showPixelCount && (
-                    <div className="mb-6">
-                      <PixelCount />
-                    </div>
-                  )}
+                      {showPixelCount && (
+                        <m.div
+                          key="pixel-count"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <PixelCount />
+                        </m.div>
+                      )}
 
-                  {showAdminPanel && (
-                    <div className="mb-6">
-                      <AdminPanel
-                        visible={showAdminPanel}
-                        adminColor={adminColor}
-                        adminSelectedSize={adminSelectedSize}
-                        isAdminSelecting={isAdminSelecting}
-                        onClose={() => setShowAdminPanel(false)}
-                        onChangeColor={(c) => setAdminColor(c)}
-                        onChangeSelectedSize={(s) => setAdminSelectedSize(s)}
-                        onToggleSelecting={(b) => setIsAdminSelecting(b)}
-                      />
-                    </div>
-                  )}
-                </div>
-              </aside>
-            )}
+                      {showAdminPanel && (
+                        <m.div
+                          key="admin-panel"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <AdminPanel
+                            visible={showAdminPanel}
+                            adminColor={adminColor}
+                            adminSelectedSize={adminSelectedSize}
+                            isAdminSelecting={isAdminSelecting}
+                            onClose={() => setShowAdminPanel(false)}
+                            onChangeColor={(c) => setAdminColor(c)}
+                            onChangeSelectedSize={(s) => setAdminSelectedSize(s)}
+                            onToggleSelecting={(b) => setIsAdminSelecting(b)}
+                          />
+                        </m.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </m.aside>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </main>
 
-      {/* Pixel infos full width card (desktop -> centered, mobile -> full-width modal style) */}
-      {showPixelInfos && (
-        <div className="mx-4 md:mx-32 my-8 p-6 bg-background-secondary shadow-lg rounded-lg border border-gray-200/60 dark:border-gray-700/60">
-          <PixelInformations />
-        </div>
-      )}
+      {/* Pixel Informations Modal */}
+      <AnimatePresence>
+        {showPixelInfos && (
+          <m.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="mx-4 md:mx-32 my-8 p-6 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50"
+          >
+            <PixelInformations />
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <Footer />
-
-      {/* Global notifications */}
-      <NotificationContainer />
     </div>
   );
 };

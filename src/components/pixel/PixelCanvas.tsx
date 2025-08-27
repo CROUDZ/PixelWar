@@ -200,27 +200,35 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       return canvasDisplaySize.width / dimensions.width;
     }, [dimensions.width, canvasDisplaySize.width]);
 
-// Calcul du nombre de pixels visibles dans le viewport (UTILISE CSS pixels, pas device pixels)
-const visiblePixelCount = useMemo(() => {
-  if (dimensions.width === 0 || dimensions.height === 0) return 0;
-  const canvas = bgCanvasRef.current;
-  if (!canvas) return 0;
+    // Calcul du nombre de pixels visibles dans le viewport (UTILISE CSS pixels, pas device pixels)
+    const visiblePixelCount = useMemo(() => {
+      if (dimensions.width === 0 || dimensions.height === 0) return 0;
+      const canvas = bgCanvasRef.current;
+      if (!canvas) return 0;
 
-  // obtenir la taille en CSS pixels (clientWidth = CSS px)
-  const cssWidth = canvas.clientWidth || canvas.width / (window.devicePixelRatio || 1);
-  const cssHeight = canvas.clientHeight || canvas.height / (window.devicePixelRatio || 1);
+      // obtenir la taille en CSS pixels (clientWidth = CSS px)
+      const cssWidth =
+        canvas.clientWidth || canvas.width / (window.devicePixelRatio || 1);
+      const cssHeight =
+        canvas.clientHeight || canvas.height / (window.devicePixelRatio || 1);
 
-  // Utiliser l'état zoom au lieu de zoomRef.current pour déclencher le recalcul
-  const cssPixelSize = zoom || (canvasDisplaySize.width / Math.max(1, dimensions.width));
+      // Utiliser l'état zoom au lieu de zoomRef.current pour déclencher le recalcul
+      const cssPixelSize =
+        zoom || canvasDisplaySize.width / Math.max(1, dimensions.width);
 
-  const visiblePixelsX = Math.ceil(cssWidth / cssPixelSize);
-  const visiblePixelsY = Math.ceil(cssHeight / cssPixelSize);
+      const visiblePixelsX = Math.ceil(cssWidth / cssPixelSize);
+      const visiblePixelsY = Math.ceil(cssHeight / cssPixelSize);
 
-  return Math.min(visiblePixelsX * visiblePixelsY, dimensions.width * dimensions.height);
-}, [dimensions, canvasDisplaySize.width, zoom]); // Ajouter zoom dans les dépendances
+      return Math.min(
+        visiblePixelsX * visiblePixelsY,
+        dimensions.width * dimensions.height,
+      );
+    }, [dimensions, canvasDisplaySize.width, zoom]); // Ajouter zoom dans les dépendances
 
-
-const shouldDisableMouseMove = useMemo(() => visiblePixelCount > 20000, [visiblePixelCount]);
+    const shouldDisableMouseMove = useMemo(
+      () => visiblePixelCount > 20000,
+      [visiblePixelCount],
+    );
 
     // Initialisation offscreen canvas et buffer
     const initOffscreenCanvas = useCallback(
@@ -264,34 +272,34 @@ const shouldDisableMouseMove = useMemo(() => visiblePixelCount > 20000, [visible
 
     // Conversion écran -> grille
     // Conversion écran -> grille (utilise CSS pixels et la même convention que le rendu)
-// Conversion écran -> grille (CSS px coherent avec zoomRef)
-const screenToGrid = useCallback(
-  (screenX: number, screenY: number) => {
-    const canvas = overlayCanvasRef.current || bgCanvasRef.current;
-    if (!canvas || dimensions.width === 0 || dimensions.height === 0) {
-      return { x: -1, y: -1 };
-    }
-    const rect = canvas.getBoundingClientRect();
-    // coords en CSS pixels
-    const canvasX_css = screenX - rect.left;
-    const canvasY_css = screenY - rect.top;
+    // Conversion écran -> grille (CSS px coherent avec zoomRef)
+    const screenToGrid = useCallback(
+      (screenX: number, screenY: number) => {
+        const canvas = overlayCanvasRef.current || bgCanvasRef.current;
+        if (!canvas || dimensions.width === 0 || dimensions.height === 0) {
+          return { x: -1, y: -1 };
+        }
+        const rect = canvas.getBoundingClientRect();
+        // coords en CSS pixels
+        const canvasX_css = screenX - rect.left;
+        const canvasY_css = screenY - rect.top;
 
-    // finalCssPixelSize = CSS px par pixel de grille (zoomRef est défini comme ça)
-    const finalCssPixelSize = zoomRef.current;
-    if (!finalCssPixelSize || finalCssPixelSize <= 0) return { x: -1, y: -1 };
+        // finalCssPixelSize = CSS px par pixel de grille (zoomRef est défini comme ça)
+        const finalCssPixelSize = zoomRef.current;
+        if (!finalCssPixelSize || finalCssPixelSize <= 0)
+          return { x: -1, y: -1 };
 
-    // panRef.current est en CSS pixels
-    const transformedX_css = canvasX_css - panRef.current.x;
-    const transformedY_css = canvasY_css - panRef.current.y;
+        // panRef.current est en CSS pixels
+        const transformedX_css = canvasX_css - panRef.current.x;
+        const transformedY_css = canvasY_css - panRef.current.y;
 
-    return {
-      x: Math.floor(transformedX_css / finalCssPixelSize),
-      y: Math.floor(transformedY_css / finalCssPixelSize),
-    };
-  },
-  [dimensions],
-);
-
+        return {
+          x: Math.floor(transformedX_css / finalCssPixelSize),
+          y: Math.floor(transformedY_css / finalCssPixelSize),
+        };
+      },
+      [dimensions],
+    );
 
     // Fonction pour déplacer la vue avec le clavier ou les boutons
     const handleNavMove = useCallback(
@@ -430,139 +438,163 @@ const screenToGrid = useCallback(
     }, [isAdminSelectingProp]);
 
     // Remplacer la fonction redrawBgCanvas existante par celle-ci
-const redrawBgCanvas = useCallback(() => {
-  const canvas = bgCanvasRef.current;
-  const ctx = bgCtxRef.current;
-  const offscreenCanvas = offscreenCanvasRef.current;
+    const redrawBgCanvas = useCallback(() => {
+      const canvas = bgCanvasRef.current;
+      const ctx = bgCtxRef.current;
+      const offscreenCanvas = offscreenCanvasRef.current;
 
-  if (!canvas || !ctx) return;
+      if (!canvas || !ctx) return;
 
-  const dpr = window.devicePixelRatio || 1;
+      const dpr = window.devicePixelRatio || 1;
 
-  // clear en device pixels
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
+      // clear en device pixels
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
 
-  // affichage placeholder si grille pas encore prête
-  if (!isGridLoaded || !offscreenCanvas) {
-    ctx.fillStyle = "#f0f0f0";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#666";
-    ctx.font = `${16 * dpr}px Arial`;
-    ctx.textAlign = "center";
-    const text = connectionState.isConnecting ? "Connexion..." : "Chargement de la toile...";
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-    return;
-  }
+      // affichage placeholder si grille pas encore prête
+      if (!isGridLoaded || !offscreenCanvas) {
+        ctx.fillStyle = "#f0f0f0";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#666";
+        ctx.font = `${16 * dpr}px Arial`;
+        ctx.textAlign = "center";
+        const text = connectionState.isConnecting
+          ? "Connexion..."
+          : "Chargement de la toile...";
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+        return;
+      }
 
-  // Transform : 1 unité = 1 pixel de grille, converti en device pixels
-  const scale = dpr * zoomRef.current;
-  // panRef.current est en CSS px -> on multiplie par dpr pour device px translation
-  const tx = Math.round(panRef.current.x * dpr);
-  const ty = Math.round(panRef.current.y * dpr);
+      // Transform : 1 unité = 1 pixel de grille, converti en device pixels
+      const scale = dpr * zoomRef.current;
+      // panRef.current est en CSS px -> on multiplie par dpr pour device px translation
+      const tx = Math.round(panRef.current.x * dpr);
+      const ty = Math.round(panRef.current.y * dpr);
 
-  // Appliquer transform (scale et translation)
-  ctx.setTransform(scale, 0, 0, scale, tx, ty);
-  ctx.imageSmoothingEnabled = false;
+      // Appliquer transform (scale et translation)
+      ctx.setTransform(scale, 0, 0, scale, tx, ty);
+      ctx.imageSmoothingEnabled = false;
 
-  // Dessiner l'offscreen (1:1 en pixels de grille). Le transform gère le scaling.
-  try {
-    ctx.drawImage(offscreenCanvas, 0, 0);
-  } catch (e) {
-    if (process.env.NODE_ENV !== "production") console.error("[PixelCanvas] drawImage failed:", e);
-  }
+      // Dessiner l'offscreen (1:1 en pixels de grille). Le transform gère le scaling.
+      try {
+        ctx.drawImage(offscreenCanvas, 0, 0);
+      } catch (e) {
+        if (process.env.NODE_ENV !== "production")
+          console.error("[PixelCanvas] drawImage failed:", e);
+      }
 
-  // RAZ du transform (pratique pour les clears suivants)
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-}, [isGridLoaded, connectionState.isConnecting]);
+      // RAZ du transform (pratique pour les clears suivants)
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }, [isGridLoaded, connectionState.isConnecting]);
 
-// Centre et adapte le zoom automatiquement quand la grille est prête ou quand la taille du canvas change.
-useEffect(() => {
-  if (!isGridLoaded) return;
-  if (dimensions.width === 0 || dimensions.height === 0) return;
-  if (canvasDisplaySize.width === 0 || canvasDisplaySize.height === 0) return;
+    // Centre et adapte le zoom automatiquement quand la grille est prête ou quand la taille du canvas change.
+    useEffect(() => {
+      if (!isGridLoaded) return;
+      if (dimensions.width === 0 || dimensions.height === 0) return;
+      if (canvasDisplaySize.width === 0 || canvasDisplaySize.height === 0)
+        return;
 
-  // CSS px par pixel de grille pour tout voir
-  const pixelSizeCSS_X = canvasDisplaySize.width / dimensions.width;
-  const pixelSizeCSS_Y = canvasDisplaySize.height / dimensions.height;
-  const fitPixelSizeCSS = Math.min(pixelSizeCSS_X, pixelSizeCSS_Y);
+      // CSS px par pixel de grille pour tout voir
+      const pixelSizeCSS_X = canvasDisplaySize.width / dimensions.width;
+      const pixelSizeCSS_Y = canvasDisplaySize.height / dimensions.height;
+      const fitPixelSizeCSS = Math.min(pixelSizeCSS_X, pixelSizeCSS_Y);
 
-  // zoomRef représente LA taille CSS (px) d'un pixel de grille
-  zoomRef.current = fitPixelSizeCSS;
-  setZoom(fitPixelSizeCSS);
+      // zoomRef représente LA taille CSS (px) d'un pixel de grille
+      zoomRef.current = fitPixelSizeCSS;
+      setZoom(fitPixelSizeCSS);
 
-  // center pan en CSS pixels
-  const finalGridWidthCss = dimensions.width * fitPixelSizeCSS;
-  const finalGridHeightCss = dimensions.height * fitPixelSizeCSS;
-  panRef.current = {
-    x: Math.round((canvasDisplaySize.width - finalGridWidthCss) / 2),
-    y: Math.round((canvasDisplaySize.height - finalGridHeightCss) / 2),
-  };
-  setPan({ x: panRef.current.x, y: panRef.current.y });
+      // center pan en CSS pixels
+      const finalGridWidthCss = dimensions.width * fitPixelSizeCSS;
+      const finalGridHeightCss = dimensions.height * fitPixelSizeCSS;
+      panRef.current = {
+        x: Math.round((canvasDisplaySize.width - finalGridWidthCss) / 2),
+        y: Math.round((canvasDisplaySize.height - finalGridHeightCss) / 2),
+      };
+      setPan({ x: panRef.current.x, y: panRef.current.y });
 
-  needsRedrawRef.current.bg = true;
-  needsRedrawRef.current.overlay = true;
-}, [isGridLoaded, dimensions.width, dimensions.height, canvasDisplaySize.width, canvasDisplaySize.height]);
-
-
-
+      needsRedrawRef.current.bg = true;
+      needsRedrawRef.current.overlay = true;
+    }, [
+      isGridLoaded,
+      dimensions.width,
+      dimensions.height,
+      canvasDisplaySize.width,
+      canvasDisplaySize.height,
+    ]);
 
     // Fonction de redraw du overlay canvas
-const redrawOverlayCanvas = useCallback(() => {
-  const canvas = overlayCanvasRef.current;
-  const ctx = overlayCtxRef.current;
-  if (!canvas || !ctx) return;
+    const redrawOverlayCanvas = useCallback(() => {
+      const canvas = overlayCanvasRef.current;
+      const ctx = overlayCtxRef.current;
+      if (!canvas || !ctx) return;
 
-  const dpr = window.devicePixelRatio || 1;
+      const dpr = window.devicePixelRatio || 1;
 
-  // clear en device pixels
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
+      // clear en device pixels
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
 
-  if (!isGridLoaded) return;
+      if (!isGridLoaded) return;
 
-  // Même transform que pour le bg : 1 unité = 1 pixel de grille
-  const scale = dpr * zoomRef.current;
-  const tx = Math.round(panRef.current.x * dpr);
-  const ty = Math.round(panRef.current.y * dpr);
-  ctx.setTransform(scale, 0, 0, scale, tx, ty);
+      // Même transform que pour le bg : 1 unité = 1 pixel de grille
+      const scale = dpr * zoomRef.current;
+      const tx = Math.round(panRef.current.x * dpr);
+      const ty = Math.round(panRef.current.y * dpr);
+      ctx.setTransform(scale, 0, 0, scale, tx, ty);
 
-  // Dessiner admin preview en unités de grille
-  if (isAdmin && adminPreview) {
-    ctx.save();
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = adminPreview.color;
-    ctx.fillRect(adminPreview.x, adminPreview.y, adminPreview.width, adminPreview.height);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = adminPreview.isSelecting ? "#00FF00" : "#FF0000";
-    ctx.lineWidth = 2 / zoomRef.current; // largeur en unités grille adaptée à l'écran
-    ctx.strokeRect(adminPreview.x, adminPreview.y, adminPreview.width, adminPreview.height);
-    ctx.restore();
-  }
+      // Dessiner admin preview en unités de grille
+      if (isAdmin && adminPreview) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = adminPreview.color;
+        ctx.fillRect(
+          adminPreview.x,
+          adminPreview.y,
+          adminPreview.width,
+          adminPreview.height,
+        );
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = adminPreview.isSelecting ? "#00FF00" : "#FF0000";
+        ctx.lineWidth = 2 / zoomRef.current; // largeur en unités grille adaptée à l'écran
+        ctx.strokeRect(
+          adminPreview.x,
+          adminPreview.y,
+          adminPreview.width,
+          adminPreview.height,
+        );
+        ctx.restore();
+      }
 
-  // Hover (1x1 pixel de grille)
-  if (!showAdminPanel && hoverRef.current) {
-    const { x, y } = hoverRef.current;
-    if (x >= 0 && x < dimensions.width && y >= 0 && y < dimensions.height) {
-      ctx.save();
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = selectedColor;
-      ctx.fillRect(x, y, 1, 1); // 1 unité = 1 pixel grille
-      ctx.restore();
-    }
-  }
+      // Hover (1x1 pixel de grille)
+      if (!showAdminPanel && hoverRef.current) {
+        const { x, y } = hoverRef.current;
+        if (x >= 0 && x < dimensions.width && y >= 0 && y < dimensions.height) {
+          ctx.save();
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = selectedColor;
+          ctx.fillRect(x, y, 1, 1); // 1 unité = 1 pixel grille
+          ctx.restore();
+        }
+      }
 
-  // Bordure en unités grille
-  ctx.strokeStyle = "#555555";
-  ctx.lineWidth = 2 / zoomRef.current;
-  ctx.strokeRect(0, 0, dimensions.width, dimensions.height);
+      // Bordure en unités grille
+      ctx.strokeStyle = "#555555";
+      ctx.lineWidth = 2 / zoomRef.current;
+      ctx.strokeRect(0, 0, dimensions.width, dimensions.height);
 
-  // remettre transform à l'identité
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-}, [isAdmin, adminPreview, selectedColor, isGridLoaded, dimensions.width, dimensions.height, showAdminPanel]);
-
+      // remettre transform à l'identité
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }, [
+      isAdmin,
+      adminPreview,
+      selectedColor,
+      isGridLoaded,
+      dimensions.width,
+      dimensions.height,
+      showAdminPanel,
+    ]);
 
     // Setup WebSocket amélioré avec gestion centralisée
     useEffect(() => {
@@ -840,54 +872,53 @@ const redrawOverlayCanvas = useCallback(() => {
     ]);
 
     // Traitement batché des mouvements de pointeur
-useEffect(() => {
-  let rafId: number | null = null;
+    useEffect(() => {
+      let rafId: number | null = null;
 
-  const processPendingPointer = () => {
-    const now = performance.now();
-    const pending = pendingPointerRef.current;
+      const processPendingPointer = () => {
+        const now = performance.now();
+        const pending = pendingPointerRef.current;
 
-    if (pending) {
-      // n'essaye de mettre à jour le hover que si suffisamment de temps s'est écoulé
-        const gridPos = screenToGrid(pending.x, pending.y);
-        if (
-          gridPos.x >= 0 &&
-          gridPos.x < dimensions.width &&
-          gridPos.y >= 0 &&
-          gridPos.y < dimensions.height
-        ) {
-          const newHover = { x: gridPos.x, y: gridPos.y };
+        if (pending) {
+          // n'essaye de mettre à jour le hover que si suffisamment de temps s'est écoulé
+          const gridPos = screenToGrid(pending.x, pending.y);
           if (
-            !hoverRef.current ||
-            hoverRef.current.x !== newHover.x ||
-            hoverRef.current.y !== newHover.y
+            gridPos.x >= 0 &&
+            gridPos.x < dimensions.width &&
+            gridPos.y >= 0 &&
+            gridPos.y < dimensions.height
           ) {
-            hoverRef.current = newHover;
-            needsRedrawRef.current.overlay = true;
+            const newHover = { x: gridPos.x, y: gridPos.y };
+            if (
+              !hoverRef.current ||
+              hoverRef.current.x !== newHover.x ||
+              hoverRef.current.y !== newHover.y
+            ) {
+              hoverRef.current = newHover;
+              needsRedrawRef.current.overlay = true;
+            }
+          } else {
+            if (hoverRef.current) {
+              hoverRef.current = null;
+              needsRedrawRef.current.overlay = true;
+            }
+
+            // on a consommé le pending (on peut le vider)
+            pendingPointerRef.current = null;
+            lastHoverProcessRef.current = now;
           }
-        } else {
-          if (hoverRef.current) {
-            hoverRef.current = null;
-            needsRedrawRef.current.overlay = true;
-          }
+          // sinon on attend (on laisse pending en place pour la prochaine passe)
+        }
 
-        // on a consommé le pending (on peut le vider)
-        pendingPointerRef.current = null;
-        lastHoverProcessRef.current = now;
-      }
-      // sinon on attend (on laisse pending en place pour la prochaine passe)
-    }
+        rafId = requestAnimationFrame(processPendingPointer);
+      };
 
-    rafId = requestAnimationFrame(processPendingPointer);
-  };
+      rafId = requestAnimationFrame(processPendingPointer);
 
-  rafId = requestAnimationFrame(processPendingPointer);
-
-  return () => {
-    if (rafId) cancelAnimationFrame(rafId);
-  };
-}, [ shouldDisableMouseMove, screenToGrid, dimensions]);
-
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      };
+    }, [shouldDisableMouseMove, screenToGrid, dimensions]);
 
     // events & resize: no longer forcing body overflow hidden (préserve menus mobiles)
     useEffect(() => {
@@ -959,7 +990,7 @@ useEffect(() => {
           setIsNavigationMode(false);
         }
       };
-     
+
       window.addEventListener("resize", resizeCanvas);
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
@@ -974,46 +1005,45 @@ useEffect(() => {
     }, [isMobile, handleNavMove, showAdminPanel]);
 
     // --- replace previous wheel attachment with this robust effect ---
-useEffect(() => {
-  // target l'overlay s'il existe sinon le bg
-  const target = overlayCanvasRef.current || bgCanvasRef.current;
-  if (!target) return;
+    useEffect(() => {
+      // target l'overlay s'il existe sinon le bg
+      const target = overlayCanvasRef.current || bgCanvasRef.current;
+      if (!target) return;
 
-const handleWheel = (e: WheelEvent) => {
-  e.preventDefault();
-  const rect = (overlayCanvasRef.current || bgCanvasRef.current)!.getBoundingClientRect();
-  const mouseX_css = e.clientX - rect.left;
-  const mouseY_css = e.clientY - rect.top;
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        const rect = (overlayCanvasRef.current ||
+          bgCanvasRef.current)!.getBoundingClientRect();
+        const mouseX_css = e.clientX - rect.left;
+        const mouseY_css = e.clientY - rect.top;
 
-  const oldZoom = zoomRef.current;
-  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-  const newZoom = Math.max(0.5, Math.min(40, oldZoom * zoomFactor)); // clamp raisonnable
+        const oldZoom = zoomRef.current;
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newZoom = Math.max(0.5, Math.min(40, oldZoom * zoomFactor)); // clamp raisonnable
 
-  const zoomRatio = newZoom / oldZoom;
+        const zoomRatio = newZoom / oldZoom;
 
-  // garder le point sous la souris
-  panRef.current = {
-    x: mouseX_css - zoomRatio * (mouseX_css - panRef.current.x),
-    y: mouseY_css - zoomRatio * (mouseY_css - panRef.current.y),
-  };
+        // garder le point sous la souris
+        panRef.current = {
+          x: mouseX_css - zoomRatio * (mouseX_css - panRef.current.x),
+          y: mouseY_css - zoomRatio * (mouseY_css - panRef.current.y),
+        };
 
-  zoomRef.current = newZoom;
-  setZoom(newZoom);
-  setPan({ x: panRef.current.x, y: panRef.current.y });
+        zoomRef.current = newZoom;
+        setZoom(newZoom);
+        setPan({ x: panRef.current.x, y: panRef.current.y });
 
-  needsRedrawRef.current.bg = true;
-  needsRedrawRef.current.overlay = true;
-};
+        needsRedrawRef.current.bg = true;
+        needsRedrawRef.current.overlay = true;
+      };
 
+      // Important: passive: false pour pouvoir preventDefault()
+      target.addEventListener("wheel", handleWheel, { passive: false });
 
-  // Important: passive: false pour pouvoir preventDefault()
-  target.addEventListener("wheel", handleWheel, { passive: false });
-
-  return () => {
-    target.removeEventListener("wheel", handleWheel);
-  };
-}, []); // pas de dépendances qui recréeraient le handler inutilement
-
+      return () => {
+        target.removeEventListener("wheel", handleWheel);
+      };
+    }, []); // pas de dépendances qui recréeraient le handler inutilement
 
     // canvas context setup
     useEffect(() => {
@@ -1332,45 +1362,38 @@ const handleWheel = (e: WheelEvent) => {
       [isAdmin, showAdminPanel, handleAdminClick, isMobile, isNavigationMode],
     );
 
-const handleMouseMove = useCallback(
-  (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // Admin handling prioritaire
-    if (isAdmin && showAdminPanel) {
-      handleAdminMouseMove(e);
-      return;
-    }
+    const handleMouseMove = useCallback(
+      (e: React.MouseEvent<HTMLCanvasElement>) => {
+        // Admin handling prioritaire
+        if (isAdmin && showAdminPanel) {
+          handleAdminMouseMove(e);
+          return;
+        }
 
-    // Gestion du drag
-    if (isDragging) {
-      const deltaX = e.clientX - lastMousePos.x; // client coords are CSS px
-      const deltaY = e.clientY - lastMousePos.y;
-      setHasDragged(true);
+        // Gestion du drag
+        if (isDragging) {
+          const deltaX = e.clientX - lastMousePos.x; // client coords are CSS px
+          const deltaY = e.clientY - lastMousePos.y;
+          setHasDragged(true);
 
-      // pan is in CSS pixels — on l'incrémente directement par le delta de la souris
-      panRef.current = {
-        x: panRef.current.x + deltaX,
-        y: panRef.current.y + deltaY,
-      };
-      setPan({ x: panRef.current.x, y: panRef.current.y });
-      setLastMousePos({ x: e.clientX, y: e.clientY });
+          // pan is in CSS pixels — on l'incrémente directement par le delta de la souris
+          panRef.current = {
+            x: panRef.current.x + deltaX,
+            y: panRef.current.y + deltaY,
+          };
+          setPan({ x: panRef.current.x, y: panRef.current.y });
+          setLastMousePos({ x: e.clientX, y: e.clientY });
 
-      needsRedrawRef.current.bg = true;
-      needsRedrawRef.current.overlay = true;
-      return;
-    }
+          needsRedrawRef.current.bg = true;
+          needsRedrawRef.current.overlay = true;
+          return;
+        }
 
-    // On alimente le batcher **à chaque move** (même si on throttlera ensuite)
-    pendingPointerRef.current = { x: e.clientX, y: e.clientY };
-  },
-  [
-    isAdmin,
-    showAdminPanel,
-    handleAdminMouseMove,
-    isDragging,
-    lastMousePos,
-  ],
-);
-
+        // On alimente le batcher **à chaque move** (même si on throttlera ensuite)
+        pendingPointerRef.current = { x: e.clientX, y: e.clientY };
+      },
+      [isAdmin, showAdminPanel, handleAdminMouseMove, isDragging, lastMousePos],
+    );
 
     const handleMouseUp = useCallback(
       (e: React.MouseEvent<HTMLCanvasElement>) => {
