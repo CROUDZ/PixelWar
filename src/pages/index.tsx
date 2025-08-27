@@ -141,7 +141,7 @@ const HomePage: React.FC = () => {
     updateScreenSize();
     window.addEventListener("resize", updateScreenSize);
     return () => window.removeEventListener("resize", updateScreenSize);
-  }, []);
+  }, [showOverlayControls, showNavInfo, showPixelCount, showAdminPanel]);
 
   // Gestion des touches
   useEffect(() => {
