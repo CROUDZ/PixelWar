@@ -35,6 +35,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
   const [y, setY] = useState(initialY);
   const [color, setColor] = useState(initialColor);
   const [remainingTime, setRemainingTime] = useState(0);
+  const [lastPixelPlacedLocally, setLastPixelPlacedLocally] = useState<number | null>(null);
 
   console.log(
     "[ValidePixel] (FR) Couleur initiale :",
@@ -54,6 +55,17 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
     return startTime && endTime && now >= startTime && now <= endTime; // Vérifie la plage horaire
   };
 
+  // Charger le dernier placement depuis localStorage au montage / changement d'utilisateur
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storageKey = `pw_last_pixel_${session?.user?.id ?? "default"}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const ts = Number(stored);
+      if (!Number.isNaN(ts)) setLastPixelPlacedLocally(ts);
+    }
+  }, [session?.user?.id]);
+
   // Calcul du cooldown restant
   useEffect(() => {
     if (session?.user?.role === "ADMIN") {
@@ -61,7 +73,20 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
       return;
     }
 
-    if (!session?.user?.lastPixelPlaced) {
+    // Utilise le temps local en priorité, sinon celui de la session (on prend le plus récent)
+    const localTs = lastPixelPlacedLocally ?? null;
+    const sessionTs = session?.user?.lastPixelPlaced
+      ? new Date(session.user.lastPixelPlaced).getTime()
+      : null;
+
+    const lastPlacedTime = (() => {
+      if (localTs && sessionTs) return Math.max(localTs, sessionTs);
+      if (localTs) return localTs;
+      if (sessionTs) return sessionTs;
+      return null;
+    })();
+
+    if (!lastPlacedTime) {
       setRemainingTime(0);
       return;
     }
@@ -70,9 +95,8 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
     const cooldownSeconds = session?.user?.boosted
       ? BOOSTED_COOLDOWN_SECONDS
       : DEFAULT_COOLDOWN_SECONDS;
-    const lastPlaced = new Date(session.user.lastPixelPlaced).getTime();
     const now = Date.now();
-    const diff = Math.max(0, cooldownSeconds * 1000 - (now - lastPlaced));
+    const diff = Math.max(0, cooldownSeconds * 1000 - (now - lastPlacedTime));
 
     setRemainingTime(Math.ceil(diff / 1000));
 
@@ -88,7 +112,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, lastPixelPlacedLocally]);
 
   const handleValidate = () => {
     console.log(
@@ -107,6 +131,18 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
 
     if (!isEventAccessible()) return; // Bloquer si l'événement n'est pas accessible
     if (session?.user?.role !== "ADMIN" && remainingTime > 0) return; // Bloquer si le cooldown est actif et que l'utilisateur n'est pas admin
+
+    // Démarre immédiatement le cooldown (persisté) avant d'appeler onValidate
+    const nowTs = Date.now();
+    setLastPixelPlacedLocally(nowTs);
+    if (typeof window !== "undefined") {
+      const storageKey = `pw_last_pixel_${session?.user?.id ?? "default"}`;
+      try {
+        localStorage.setItem(storageKey, String(nowTs));
+      } catch {
+        // ignore storage errors
+      }
+    }
 
     onValidate(x, y, color);
   };
@@ -251,7 +287,7 @@ const ValidePixel: React.FC<ValidePixelProps> = ({
               </button>
               <button
                 onClick={handleValidate}
-                disabled={status === "loading" || !isEventAccessible()}
+                disabled={status === "loading" || !isEventAccessible() || (session?.user?.role !== "ADMIN" && remainingTime > 0)}
                 className="flex-1 px-6 py-3 bg-accent hover:bg-accent-hover active:bg-accent-active text-white dark:text-gray-800 rounded-xl 
                 font-semibold transition-all duration-fast shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed 
                 active:scale-95"
