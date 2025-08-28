@@ -100,6 +100,8 @@ sub.on("message", (channel, message) => {
       try {
         const payload = JSON.parse(message);
         const discordId = String(payload.userId);
+        const boosted = Boolean(payload.boosted);
+
         console.log(`L'utilisateur avec l'ID Discord ${discordId} a été lié.`);
         console.log(
           "[server.js] événement de liaison pour discordId:",
@@ -133,13 +135,14 @@ sub.on("message", (channel, message) => {
           try {
             const updated = await prisma.user.update({
               where: { id: account.userId },
-              data: { linked: true },
+              data: { linked: true, boosted },
             });
             console.log(
               `[server.js] prisma: utilisateur ${account.userId} mis à jour linked=true`,
               {
                 updatedId: updated.id,
                 linked: updated.linked,
+                boosted: updated.boosted,
               },
             );
           } catch (e) {

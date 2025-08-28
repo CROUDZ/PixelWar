@@ -1,5 +1,5 @@
 // bot/buttons/link.ts
-import { ButtonInteraction } from "discord.js";
+import { ButtonInteraction, GuildMember } from "discord.js";
 import { Redis } from "ioredis";
 
 const redis = new Redis();
@@ -12,10 +12,17 @@ const linkButton = {
   async execute(interaction: ButtonInteraction): Promise<void> {
     const userId = interaction.user.id;
     console.log("[Bouton Cliqué] userId :", userId);
+
+    // Vérifier si l'utilisateur a boosté le serveur
+    let boosted = false;
+    if (interaction.member instanceof GuildMember && interaction.member.premiumSince) {
+      boosted = true;
+    }
+
     try {
       const count = await redis.publish(
         "link",
-        JSON.stringify({ userId, ts: Date.now() }),
+        JSON.stringify({ userId, ts: Date.now(), boosted }),
       );
       console.log("[Redis] Message publié, abonnés :", count);
       console.log(
