@@ -40,11 +40,21 @@ export default async function handler(
       await client.connect();
     }
 
+    const eventMode = await prisma.eventMode.findUnique({
+      where: { name: "eventMode" },
+      select: { width: true, height: true },
+    });
+
+    if (!eventMode) {
+      return res.status(500).json({ error: "Event mode configuration not found" });
+    }
+
+    const width = eventMode.width;
+    const height = eventMode.height;
+
     const GRID_KEY = process.env.GRID_KEY || "pixel-grid";
     const QUEUE_KEY = process.env.QUEUE_KEY || "pixel-queue";
     const BINARY_KEY = "pixelwar:canvas:v1"; // Clé pour la persistance binaire
-    const WIDTH = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
-    const HEIGHT = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
     const DEFAULT_COLOR = process.env.DEFAULT_COLOR || "#FFFFFE";
 
     console.log(
@@ -52,10 +62,10 @@ export default async function handler(
     );
 
     // 1. Créer une grille vide (format legacy JSON pour compatibilité)
-    const emptyGrid = new Array(WIDTH * HEIGHT).fill(DEFAULT_COLOR);
+    const emptyGrid = new Array(width * height).fill(DEFAULT_COLOR);
 
     // 2. Créer un buffer binaire vide (tous les pixels à l'ID 0 = couleur par défaut)
-    const emptyBinaryGrid = new Uint8Array(WIDTH * HEIGHT); // Rempli de 0 par défaut
+    const emptyBinaryGrid = new Uint8Array(width * height); // Rempli de 0 par défaut
 
     // 3. ATOMIQUE : Nettoyer toutes les données Redis
     const multi = client.multi();
@@ -87,8 +97,8 @@ export default async function handler(
     const clearMessage = {
       adminId: session.user.id,
       timestamp: Date.now(),
-      width: WIDTH,
-      height: HEIGHT,
+      width: width,
+      height: height,
       defaultColor: DEFAULT_COLOR,
       grid: emptyGrid, // Inclure la grille vide pour synchronisation immédiate
     };

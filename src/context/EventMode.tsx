@@ -14,7 +14,11 @@ interface EventModeContextProps {
     isActive: boolean,
     startTime: Date | null,
     endTime: Date | null,
-  ) => void;
+    width: number,
+    height: number,
+  ) => Promise<void>;
+  width: number;
+  height: number;
 }
 
 const EventModeContext = createContext<EventModeContextProps | undefined>(
@@ -25,6 +29,8 @@ export const EventModeProvider = ({ children }: { children: ReactNode }) => {
   const [isActive, setIsActive] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [width, setWidth] = useState<number>(100);
+  const [height, setHeight] = useState<number>(100);
 
   useEffect(() => {
     // Fetch initial data from the API
@@ -36,6 +42,8 @@ export const EventModeProvider = ({ children }: { children: ReactNode }) => {
           setIsActive(data.active);
           setStartTime(new Date(data.startDate));
           setEndTime(new Date(data.endDate));
+          setWidth(data.width);
+          setHeight(data.height);
         } else {
           console.error("Failed to fetch event mode:", await response.json());
         }
@@ -51,10 +59,14 @@ export const EventModeProvider = ({ children }: { children: ReactNode }) => {
     active: boolean,
     start: Date | null,
     end: Date | null,
+    width: number,
+    height: number,
   ) => {
     setIsActive(active);
     setStartTime(start);
     setEndTime(end);
+    setWidth(width);
+    setHeight(height);
 
     // Update the database
     try {
@@ -65,6 +77,8 @@ export const EventModeProvider = ({ children }: { children: ReactNode }) => {
           startDate: start?.toISOString(),
           endDate: end?.toISOString(),
           active,
+          width,
+          height,
         }),
       });
 
@@ -78,7 +92,7 @@ export const EventModeProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <EventModeContext.Provider
-      value={{ isActive, startTime, endTime, setEventState }}
+      value={{ isActive, startTime, endTime, width, height, setEventState }}
     >
       {children}
     </EventModeContext.Provider>

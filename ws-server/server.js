@@ -25,9 +25,10 @@ const FLUSH_INTERVAL_MS = Number(process.env.FLUSH_INTERVAL_MS || 100);
 const BATCH_MAX = Number(process.env.BATCH_MAX || 1000);
 const GRID_SAVE_DEBOUNCE_MS = Number(process.env.GRID_SAVE_DEBOUNCE_MS || 1000);
 
-const WIDTH = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
-const HEIGHT = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
-console.log(`Canvas dimensions: ${WIDTH}x${HEIGHT}`);
+// --- NOTE: On ne lit plus NEXT_PUBLIC_WIDTH / NEXT_PUBLIC_HEIGHT depuis le .env ---
+// On initialise des defaults puis on écrase avec la valeur stockée en base via Prisma
+let WIDTH = 100;
+let HEIGHT = 100;
 
 // --- Clients Redis ---
 const redisUrl = process.env.REDIS_URL || undefined;
@@ -412,89 +413,121 @@ class PaletteManager {
   await client.connect();
   console.log("Connexion à Redis réussie (client)");
 
+  // --- Récupérer la taille de la grille depuis la DB via Prisma (eventMode where name="eventMode") ---
+  try {
+    // utilise findFirst au cas où `name` ne serait pas unique ; adapte si besoin à findUnique
+    const cfg = await prisma.eventMode.findFirst({
+      where: { name: "eventMode" },
+      select: { width: true, height: true },
+    });
+
+    if (cfg) {
+      const w = Number(cfg.width);
+      const h = Number(cfg.height);
+      if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+        WIDTH = Math.trunc(w);
+        HEIGHT = Math.trunc(h);
+        console.log(`[server.js] Dimensions récupérées depuis la BD: ${WIDTH}x${HEIGHT}`);
+      } else {
+        console.warn("[server.js] Dimensions en BD invalides, utilisation des valeurs par défaut:", WIDTH, "x", HEIGHT);
+      }
+    } else {
+      console.warn("[server.js] Aucun enregistrement eventMode trouvé (name='eventMode') — utilisation des valeurs par défaut:", WIDTH, "x", HEIGHT);
+    }
+  } catch (e) {
+    console.error("[server.js] Erreur lors de la récupération des dimensions depuis Prisma:", e);
+    console.warn("Utilisation des valeurs par défaut:", WIDTH, "x", HEIGHT);
+  }
+
   // --- Charger l'instantané du canvas (essayer d'abord le binaire via loadFromRedis) ---
+  // NOTE: Si un snapshot binaire exact existe dans Redis, on le charge. Sinon, on reconstruit
+  // la grille à partir de la table PixelAction (prisma) de manière paginée/optimisée.
   palette = new PaletteManager(DEFAULT_COLOR);
 
-  // 1) Fix immédiat - charger le canvas seulement si la palette est cohérente
-  const snap = await loadFromRedis(WIDTH, HEIGHT).catch(() => undefined);
-
-  const rawGrid = await client.get(GRID_KEY).catch(() => null);
+  // tenter de restaurer la palette depuis Redis si possible
   const paletteRaw = await client.get(PALETTE_KEY).catch(() => null);
-
-  // Logs d'instrumentation pour débugger
-  console.log(
-    "redis keys: GRID_KEY exists:",
-    !!rawGrid,
-    ", PALETTE_KEY exists:",
-    !!paletteRaw,
-    ", snap length:",
-    snap ? snap.length : 0,
-  );
-  if (paletteRaw)
-    console.log(
-      "PALETTE sample (first 10 ids):",
-      JSON.parse(paletteRaw).slice(0, 10),
-    );
-
-  // 1) Si on a snapshot binaire ET palette persistée -> RESTAURE les deux
-  if (
-    snap &&
-    snap instanceof Uint8Array &&
-    snap.length === WIDTH * HEIGHT &&
-    paletteRaw
-  ) {
+  if (paletteRaw) {
     try {
       const parsedPalette = JSON.parse(paletteRaw);
       if (Array.isArray(parsedPalette)) {
         palette.restoreFromArray(parsedPalette);
         console.log("Palette restaurée depuis Redis.");
-        canvas = new PixelCanvas(WIDTH, HEIGHT, snap);
-        console.log(
-          "Instantané binaire + palette chargés depuis la persistance.",
-        );
-      } else {
-        throw new Error("PALETTE_KEY invalide");
       }
     } catch (e) {
-      console.warn(
-        "PALETTE_KEY corrompu -> fallback vers GRID_KEY ou vide:",
-        e.message,
-      );
+      console.warn("PALETTE_KEY corrompu -> ignored:", e.message);
     }
   }
 
-  // 2) Sinon si on a un GRID_KEY valide (JSON de couleurs) -> utiliser ça (garantit correspondance couleurs)
-  if (!canvas && rawGrid) {
+  // créer un canvas vide par défaut (sera remplacé si on trouve un snapshot binaire exact)
+  canvas = new PixelCanvas(WIDTH, HEIGHT, new Uint8Array(WIDTH * HEIGHT));
+
+  // 1) Essayer le snapshot binaire Redis (meilleur perf si présent et bonne taille)
+  const snap = await loadFromRedis(WIDTH, HEIGHT).catch(() => undefined);
+  if (snap && snap instanceof Uint8Array && snap.length === WIDTH * HEIGHT) {
     try {
-      const parsed = JSON.parse(rawGrid);
-      if (Array.isArray(parsed) && parsed.length === WIDTH * HEIGHT) {
-        const snapFromStrings = palette.arrayStringsToSnapshot(
-          parsed,
-          WIDTH,
-          HEIGHT,
-        );
-        canvas = new PixelCanvas(WIDTH, HEIGHT, snapFromStrings);
-        console.log("JSON GRID_KEY hérité chargé et converti en PixelCanvas.");
-      } else {
-        throw new Error("GRID_KEY invalide");
-      }
+      canvas = new PixelCanvas(WIDTH, HEIGHT, snap);
+      console.log("Instantané binaire cohérent chargé depuis la persistance.");
     } catch (e) {
-      console.warn(
-        "GRID_KEY invalide -> démarrage d'un canvas vide:",
-        e.message,
-      );
+      console.warn("Échec de l'utilisation du snapshot binaire -> on reconstruira depuis la DB:", e.message);
+    }
+  } else {
+    // 2) Sinon: reconstruire depuis la table PixelAction (prend en charge les agrandissements)
+    console.log("Aucun snapshot binaire exact trouvé — reconstruction depuis PixelAction (BD)...");
+
+    // Pagination efficace pour éviter d'aspirer tout en mémoire
+    const BATCH = 10000; // ajustable selon mémoire / perf
+    let lastId = null;
+    while (true) {
+      const where = lastId ? { id: { gt: lastId } } : {};
+      const rows = await prisma.pixelAction.findMany({
+        where,
+        select: { id: true, x: true, y: true, color: true },
+        orderBy: { id: 'asc' },
+        take: BATCH,
+      });
+
+      if (!rows || rows.length === 0) break;
+
+      for (const r of rows) {
+        // si le pixel est en dehors de la nouvelle taille (rare si agrandissement seulement), on l'ignore
+        if (r.x == null || r.y == null) continue;
+        if (r.x < 0 || r.y < 0) continue;
+        if (r.x >= WIDTH || r.y >= HEIGHT) continue;
+
+        const col = String(r.color ?? DEFAULT_COLOR).toUpperCase();
+        const colorId = palette.getId(col);
+        try {
+          canvas.setPixel(r.x, r.y, colorId);
+        } catch (e) {
+          // setPixel doit gérer les coordonnées, mais on protège
+          console.warn("Impossible d'appliquer pixel depuis la BD:", r, e.message);
+        }
+      }
+
+      lastId = rows[rows.length - 1].id;
+      if (rows.length < BATCH) break; // fin
+    }
+
+    console.log("Reconstruction depuis PixelAction terminée.");
+
+    // Sauvegarder le résultat dans Redis pour accélérer les prochains démarrages
+    try {
+      await saveToRedis(canvas);
+      const arr = palette.snapshotToArrayStrings(canvas.snapshot());
+      const paletteArr = palette.toArray();
+      const multi = client.multi();
+      multi.set(GRID_KEY, JSON.stringify(arr));
+      multi.set(PALETTE_KEY, JSON.stringify(paletteArr));
+      await multi.exec();
+      console.log("Grille reconstruite sauvegardée dans Redis (binaire + JSON GRID_KEY/PALETTE_KEY).");
+    } catch (e) {
+      console.warn("Impossible de sauvegarder la grille reconstruite dans Redis:", e.message);
     }
   }
 
-  // 3) Sinon -> canvas vide
-  if (!canvas) {
-    const emptySnap = new Uint8Array(WIDTH * HEIGHT);
-    palette.getId(DEFAULT_COLOR);
-    canvas = new PixelCanvas(WIDTH, HEIGHT, emptySnap);
-    console.log("Aucune grille fiable trouvée — PixelCanvas vide démarré.");
-  }
+  console.log(`Canvas dimensions final : ${WIDTH}x${HEIGHT}`);
 
-  // --- utilitaire: convertir x,y en index (identique à PixelCanvas.index mais privé ici si nécessaire) ---
+  // --- utilitaire: convertir x,y en index (identique à PixelCanvas.index mais privé ici si nécessaire) --- (identique à PixelCanvas.index mais privé ici si nécessaire) ---
   /*function idxOf(x, y) {
     return y * WIDTH + x;
   }*/
@@ -1036,7 +1069,5 @@ class PaletteManager {
   });
 
   console.log("Serveur prêt.");
-})().catch((e) => {
-  console.log("Erreur fatale du serveur : " + e.message);
-  process.exit(1);
-});
+})();
+

@@ -3,6 +3,23 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+type EventModeUpdateData = {
+  startDate?: Date;
+  endDate?: Date;
+  active?: boolean;
+  width?: number;
+  height?: number;
+};
+
+type EventModeCreateData = {
+  name: string;
+  startDate: Date;
+  endDate: Date;
+  active: boolean;
+  width: number;
+  height: number;
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -11,26 +28,33 @@ export default async function handler(
   try {
     if (req.method === "POST") {
       // Update or create EventMode
-      const { startDate, endDate, active } = req.body;
+      const { startDate, endDate, active, width, height } = req.body;
+      console.log("Received EventMode data:", req.body);
       // Assuming a fixed name for the event mode
 
-      if (!startDate || !endDate || active === undefined) {
-        return res.status(400).json({ error: "All fields are required." });
-      }
+      const updateData: EventModeUpdateData = {};
+      if (startDate !== undefined) updateData.startDate = new Date(startDate);
+      if (endDate !== undefined) updateData.endDate = new Date(endDate);
+      if (active !== undefined) updateData.active = active;
+      if (width !== undefined) updateData.width = width;
+      if (height !== undefined) updateData.height = height;
+
+      const createData: EventModeCreateData = {
+        name,
+        startDate: startDate !== undefined ? new Date(startDate) : new Date(),
+        endDate:
+          endDate !== undefined
+            ? new Date(endDate)
+            : new Date(Date.now() + 24 * 60 * 60 * 1000), // Default to 24 hours from now
+        active: active !== undefined ? active : false,
+        width: width !== undefined ? width : 100, // Default width
+        height: height !== undefined ? height : 100, // Default height
+      };
 
       const updatedEvent = await prisma.eventMode.upsert({
         where: { name }, // Use name as unique identifier
-        update: {
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
-          active,
-        },
-        create: {
-          name,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
-          active,
-        },
+        update: updateData,
+        create: createData,
       });
 
       return res.status(200).json(updatedEvent);

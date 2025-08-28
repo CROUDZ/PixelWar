@@ -220,7 +220,7 @@ const ClearCanvasButton: React.FC = () => {
 
 const AdminPage: React.FC = () => {
   const { data: session } = useSession();
-  const { isActive, startTime, endTime, setEventState } = useEventMode(); // Use EventMode context
+  const { isActive, startTime, endTime, setEventState, width: currentWidth, height: currentHeight } = useEventMode(); // Use EventMode context
   const [admin, setAdmin] = useState("");
   const [userId, setUserId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -231,6 +231,9 @@ const AdminPage: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [newStartTime, setNewStartTime] = useState<string>("");
   const [newEndTime, setNewEndTime] = useState<string>("");
+  const [newWidth, setNewWidth] = useState<number>(currentWidth || 100); // New width input
+  const [newHeight, setNewHeight] = useState<number>(currentHeight || 100); // New height input
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
   const handleAdmin = async (e: React.FormEvent, newRole: "ADMIN" | "USER") => {
     e.preventDefault();
@@ -287,7 +290,14 @@ const AdminPage: React.FC = () => {
   const handleEventUpdate = () => {
     const start = newStartTime ? new Date(newStartTime) : null;
     const end = newEndTime ? new Date(newEndTime) : null;
-    setEventState(!isActive, start, end);
+    setEventState(!isActive, start, end, newWidth, newHeight);
+  };
+
+  const handleSizeUpdate = () => {
+    console.log("Updating Event Mode Size:", { newWidth, newHeight });
+    setEventState(isActive, startTime, endTime, newWidth, newHeight);
+    setUpdateSuccess(true);
+    setTimeout(() => setUpdateSuccess(false), 3000);
   };
 
   // Fetch all users
@@ -864,6 +874,182 @@ const AdminPage: React.FC = () => {
                             minute: "2-digit",
                           })
                         : "Non défini"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </m.div>
+
+        {/* Configuration de la taille de la grille */}
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-xl"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Palette className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Configuration de la Grille
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Ajuster la taille de la grille PixelWar (augmentation uniquement)
+              </p>
+            </div>
+            <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+              Configuration
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Configuration des dimensions */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Dimensions de la Grille
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Largeur actuelle:{" "}
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                      {currentWidth || 100}px
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    value={newWidth}
+                    onChange={(e) => {
+                      const inputWidth = parseInt(e.target.value);
+                      if (inputWidth >= (currentWidth || 100)) {
+                        // Only allow increase from current database value
+                        setNewWidth(inputWidth);
+                      }
+                    }}
+                    min={currentWidth || 100}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="Nouvelle largeur"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Valeur minimale: {currentWidth || 100}px (augmentation uniquement)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Hauteur actuelle:{" "}
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                      {currentHeight || 100}px
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    value={newHeight}
+                    onChange={(e) => {
+                      const inputHeight = parseInt(e.target.value);
+                      if (inputHeight >= (currentHeight || 100)) {
+                        // Only allow increase from current database value
+                        setNewHeight(inputHeight);
+                      }
+                    }}
+                    min={currentHeight || 100}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="Nouvelle hauteur"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Valeur minimale: {currentHeight || 100}px (augmentation uniquement)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contrôles et aperçu */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Contrôles de Mise à Jour
+              </h3>
+
+              <m.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={handleSizeUpdate}
+                disabled={isLoading}
+                className={`w-full font-semibold rounded-xl px-6 py-4 transition-all flex items-center justify-center gap-3 shadow-lg ${
+                  updateSuccess
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                    : "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white"
+                }`}
+              >
+                {updateSuccess ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Grille mise à jour !
+                  </>
+                ) : isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Mise à jour en cours...
+                  </>
+                ) : (
+                  <>
+                    <Palette className="w-4 h-4" />
+                    Mettre à Jour la Grille
+                  </>
+                )}
+              </m.button>
+
+              {/* Aperçu des dimensions */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-6">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                  Aperçu des Dimensions
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Largeur actuelle
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                      {currentWidth || 100}px
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Nouvelle largeur
+                    </span>
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {newWidth}px
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Hauteur actuelle
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                      {currentHeight || 100}px
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Nouvelle hauteur
+                    </span>
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {newHeight}px
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Pixels totaux (nouveau)
+                    </span>
+                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                      {newWidth * newHeight}
                     </span>
                   </div>
                 </div>

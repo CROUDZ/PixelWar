@@ -18,9 +18,7 @@ import {
 } from "@/lib/ws";
 import { CanvasMonitor } from "@/lib/canvas-monitor";
 import ValidePixel from "./ValidePixel";
-
-const pixelWidth = Number(process.env.NEXT_PUBLIC_WIDTH || 100);
-const pixelHeight = Number(process.env.NEXT_PUBLIC_HEIGHT || 100);
+import { useEventMode } from "@/context/EventMode";
 
 // Helper function: convertit #RRGGBB ou #RGB -> Uint32 dans le buffer (little-endian ABGR pour ImageData)
 const hexToRGBAUint32 = (hex: string): number => {
@@ -95,6 +93,8 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
     const { data: session } = useSession();
     const userId = session?.user?.id ?? null;
     const isAdmin = session?.user?.role === "ADMIN";
+
+    const { width: pixelWidth, height: pixelHeight } = useEventMode();
 
     // Références pour les canvas (bg + overlay)
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -837,7 +837,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
       setIsGridLoaded(false);
       setLastSyncTimestamp(0);
       setMissedUpdates(0);
-    }, []);
+    }, [pixelWidth, pixelHeight]);
 
     // Fallback init grid si le serveur ne répond jamais et qu'on est connecté
     useEffect(() => {
@@ -1002,7 +1002,7 @@ const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
       };
-    }, [isMobile, handleNavMove, showAdminPanel]);
+    }, [isMobile, handleNavMove, showAdminPanel, pixelWidth, pixelHeight]);
 
     // --- replace previous wheel attachment with this robust effect ---
     useEffect(() => {

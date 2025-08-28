@@ -91,6 +91,8 @@ model EventMode {
   startDate DateTime
   endDate   DateTime
   active    Boolean  @default(false)
+  width     Int      @default(100)
+  height    Int      @default(100)
 
   //@@map("event_mode")
 }
