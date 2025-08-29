@@ -29,7 +29,7 @@ export default class MyDocument extends Document {
           <meta name="author" content="PixelWar Team" />
 
           {/* Favicons et icônes */}
-          <link rel="icon" href="/favicon.ico" />
+          <link rel="icon" href="/HUB-RP.webp" />
           <meta name="theme-color" content="#acfaf5" />
 
           {/* Open Graph pour les réseaux sociaux */}

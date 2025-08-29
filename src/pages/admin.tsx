@@ -28,6 +28,7 @@ import {
   Pause,
 } from "lucide-react";
 import { useEventMode } from "@/context/EventMode"; // Import EventMode context
+import { sendWS } from "@/lib/ws";
 
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
@@ -287,15 +288,27 @@ const AdminPage: React.FC = () => {
     setIsLoading(false);
   };
 
-  const handleEventUpdate = () => {
+  const handleEventUpdate = async () => {
     const start = newStartTime ? new Date(newStartTime) : null;
     const end = newEndTime ? new Date(newEndTime) : null;
-    setEventState(!isActive, start, end, newWidth, newHeight);
+    await setEventState(!isActive, start, end, newWidth, newHeight);
+    // Inform WS server that grid size may have changed
+    try {
+      sendWS({ type: "gridSizeChanged", width: newWidth, height: newHeight, isAdmin: true });
+    } catch (e) {
+      console.error("WS notify gridSizeChanged failed:", e);
+    }
   };
 
-  const handleSizeUpdate = () => {
+  const handleSizeUpdate = async () => {
     console.log("Updating Event Mode Size:", { newWidth, newHeight });
-    setEventState(isActive, startTime, endTime, newWidth, newHeight);
+    await setEventState(isActive, startTime, endTime, newWidth, newHeight);
+    // Notify WS server to reload grid size without restart
+    try {
+      sendWS({ type: "gridSizeChanged", width: newWidth, height: newHeight, isAdmin: true });
+    } catch (e) {
+      console.error("WS notify gridSizeChanged failed:", e);
+    }
     setUpdateSuccess(true);
     setTimeout(() => setUpdateSuccess(false), 3000);
   };
@@ -1051,6 +1064,20 @@ const AdminPage: React.FC = () => {
                     <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
                       {newWidth * newHeight}
                     </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                      Information Importante
+                    </h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-400">
+                      L'augmentation de la taille de la grille nécessite un
+                      redémarrage du serveur pour prendre effet.
+                    </p>
                   </div>
                 </div>
               </div>

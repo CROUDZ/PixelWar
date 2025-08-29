@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "redis";
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,9 @@ export default async function handler(
   res: NextApiResponse,
 ) {
   const name = "eventMode";
+  const redisClient = createClient(
+    process.env.REDIS_URL ? { url: process.env.REDIS_URL } : {},
+  );
   try {
     if (req.method === "POST") {
       // Update or create EventMode
@@ -56,6 +60,27 @@ export default async function handler(
         update: updateData,
         create: createData,
       });
+
+      // If width/height provided, publish to Redis so WS server reloads grid size
+      if ((width !== undefined || height !== undefined)) {
+        try {
+          if (!redisClient.isOpen) await redisClient.connect();
+          const newW = width ?? updatedEvent.width;
+          const newH = height ?? updatedEvent.height;
+          await redisClient.publish(
+            "grid-size-changed",
+            JSON.stringify({ width: newW, height: newH, ts: Date.now() }),
+          );
+          console.log("Published grid-size-changed to Redis:", {
+            width: newW,
+            height: newH,
+          });
+        } catch (e) {
+          console.warn("Failed to publish grid-size-changed:", e);
+        } finally {
+          try { await redisClient.quit(); } catch {}
+        }
+      }
 
       return res.status(200).json(updatedEvent);
     } else if (req.method === "GET") {

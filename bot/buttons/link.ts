@@ -1,46 +1,44 @@
-// bot/buttons/link.ts
-import { ButtonInteraction, GuildMember } from "discord.js";
-import { Redis } from "ioredis";
+import { Events, Client, GuildMember } from "discord.js";
 
-const redis = new Redis();
+const ENV = process.env.NODE_ENV || "development";
+const API_URL =
+  ENV === "production"
+    ? "https://pixelwar-hubdurp.fr"
+    : "http://localhost:3000";
 
-redis.on("connect", () => console.log("[Redis] Connexion réussie (bot)"));
-redis.on("error", (e) => console.error("[Redis] erreur (bot) :", e));
+const guildMemberRemoveEvent = {
+  name: Events.GuildMemberRemove,
+  async execute(
+    client: Client,
+    oldMember: GuildMember,
+    newMember: GuildMember,
+  ) {
+    let boosted: boolean = false;
 
-const linkButton = {
-  id: "link",
-  async execute(interaction: ButtonInteraction): Promise<void> {
-    const userId = interaction.user.id;
-    console.log("[Bouton Cliqué] userId :", userId);
-
-    // Vérifier si l'utilisateur a boosté le serveur
-    let boosted = false;
-    if (interaction.member instanceof GuildMember && interaction.member.premiumSince) {
+    if (!oldMember.premiumSince && newMember.premiumSince) {
       boosted = true;
+      console.log(`Utilisateur a boosté le serveur : ${newMember.user.tag}`);
+    }
+    if (newMember.premiumSince && !oldMember.premiumSince) {
+      boosted = false;
+      console.log(
+        `Utilisateur a retiré son boost du serveur : ${newMember.user.tag}`,
+      );
     }
 
     try {
-      const count = await redis.publish(
-        "link",
-        JSON.stringify({ userId, ts: Date.now(), boosted }),
+      await fetch(`${API_URL}/api/guildMemberBoostUpdate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: newMember.id, boosted: boosted }),
+      });
+    } catch (error) {
+      console.error(
+        "Échec de la notification à l'API concernant le retrait du membre du serveur :",
+        error,
       );
-      console.log("[Redis] Message publié, abonnés :", count);
-      console.log(
-        "[DEBUG] (FR) Publication Redis effectuée pour l'utilisateur :",
-        userId,
-      );
-    } catch (e) {
-      console.error("[Redis] Erreur lors de la publication :", e);
     }
-    await interaction.reply({
-      content: "Demande de liaison envoyée.",
-      ephemeral: true,
-    });
-    console.log(
-      "[DEBUG] (FR) Réponse envoyée à l'utilisateur Discord :",
-      userId,
-    );
   },
 };
 
-export default linkButton;
+export default guildMemberRemoveEvent;

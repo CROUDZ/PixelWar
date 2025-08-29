@@ -179,6 +179,7 @@ export const authOptions: NextAuthOptions = {
   events: {
     // event appelé quand un Account est lié à un User (après la création)
     async linkAccount({ account, user }) {
+      console.log("linkAccount:", { account, user });
       try {
         if (!account || !user) return;
         if (account.provider !== "discord") return;

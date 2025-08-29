@@ -53,6 +53,14 @@ sub.subscribe("canvas-clear", (err, count) => {
     console.error(`Erreur d'abonnement au canal canvas-clear : ${err.message}`);
   else console.log(`Abonné au canal canvas-clear (${count} abonnés).`);
 });
+// AJOUT: s'abonner au canal grid-size-changed (update ajouté par l'IA)
+sub.subscribe("grid-size-changed", (err, count) => {
+  if (err)
+    console.error(
+      `Erreur d'abonnement au canal grid-size-changed : ${err.message}`,
+    );
+  else console.log(`Abonné au canal grid-size-changed (${count} abonnés).`);
+});
 
 sub.on("message", (channel, message) => {
   console.log(`Message reçu sur le canal ${channel} : ${message}`);
@@ -281,6 +289,95 @@ sub.on("message", (channel, message) => {
     })();
     return;
   }
+
+  // --- AJOUT: gestion de grid-size-changed (fourni par l'IA mais intégrée proprement) ---
+  if (channel === "grid-size-changed") {
+    (async () => {
+      try {
+        const payload = JSON.parse(message);
+        const newW = Number(payload.width);
+        const newH = Number(payload.height);
+        if (!Number.isFinite(newW) || !Number.isFinite(newH) || newW <= 0 || newH <= 0) {
+          console.warn("[server.js] grid-size-changed: dimensions invalides", payload);
+          return;
+        }
+        if (newW === WIDTH && newH === HEIGHT) {
+          console.log(
+            `[server.js] grid-size-changed: dimensions identiques (${WIDTH}x${HEIGHT})`
+          );
+          return;
+        }
+
+        console.log(
+          `[server.js] grid-size-changed via Redis -> ${WIDTH}x${HEIGHT} => ${newW}x${newH}`,
+        );
+
+        WIDTH = Math.trunc(newW);
+        HEIGHT = Math.trunc(newH);
+
+        // Reconstruire la grille depuis la base de données (prend en charge agrandissement)
+        const newCanvas = new PixelCanvas(WIDTH, HEIGHT, new Uint8Array(WIDTH * HEIGHT));
+
+        const BATCH = 10000;
+        let lastId = null;
+        while (true) {
+          const where = lastId ? { id: { gt: lastId } } : {};
+          const rows = await prisma.pixelAction.findMany({
+            where,
+            select: { id: true, x: true, y: true, color: true },
+            orderBy: { id: 'asc' },
+            take: BATCH,
+          });
+          if (!rows || rows.length === 0) break;
+
+          for (const r of rows) {
+            if (r.x == null || r.y == null) continue;
+            if (r.x < 0 || r.y < 0) continue;
+            if (r.x >= WIDTH || r.y >= HEIGHT) continue; // si jamais
+            const col = String(r.color ?? DEFAULT_COLOR).toUpperCase();
+            const colorId = palette.getId(col);
+            try { newCanvas.setPixel(r.x, r.y, colorId); } catch { /* ignore */ }
+          }
+
+          lastId = rows[rows.length - 1].id;
+          if (rows.length < BATCH) break;
+        }
+
+        // Recalculer totalPixels
+        try {
+          const snap = newCanvas.snapshot();
+          let count = 0;
+          for (let i = 0; i < snap.length; i++) if (snap[i] !== 0) count++;
+          totalPixels = count;
+        } catch { /* ignore */ }
+
+        // Remplacer et sauvegarder
+        canvas = newCanvas;
+        try {
+          await saveToRedis(canvas);
+          const arr = palette.snapshotToArrayStrings(canvas.snapshot());
+          const paletteArr = palette.toArray();
+          const multi = client.multi();
+          multi.set(GRID_KEY, JSON.stringify(arr));
+          multi.set(PALETTE_KEY, JSON.stringify(paletteArr));
+          await multi.exec();
+        } catch (e) {
+          console.warn("[server.js] Sauvegarde post-redimensionnement échouée:", e.message);
+        }
+
+        // Programmer sauvegarde debouncée et notifier
+        scheduleSaveGrid();
+        broadcast({ type: "resync", timestamp: Date.now(), width: WIDTH, height: HEIGHT });
+        console.log("[server.js] grid-size-changed traité (reconstruction DB), resync diffusé.");
+      } catch (e) {
+        console.error("[server.js] Erreur grid-size-changed:", e);
+      }
+    })();
+    return;
+  }
+
+  // Ignorer les autres messages pour l'instant
+  console.log(`[server.js] Message ignoré pour le canal inconnu: ${channel}`);
 });
 
 // --- Prisma ---
@@ -1073,4 +1170,3 @@ class PaletteManager {
 
   console.log("Serveur prêt.");
 })();
-
